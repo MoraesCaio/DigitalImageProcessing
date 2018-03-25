@@ -62,6 +62,45 @@ def to_rgb(y, i, q):
     return r, g, b
 
 
+def borderline_pixel(img, x, y):
+    x_valid = max(min(x, img.width - 1), 0)
+    y_valid = max(min(y, img.height - 1), 0)
+    return x_valid, y_valid
+
+
+def get_matrix_part(img, x, y):
+    part = [[borderline_pixel(img, x-1, y-1), borderline_pixel(img, x, y-1), borderline_pixel(img, x+1, y-1)],
+            [borderline_pixel(img, x-1, y)  , borderline_pixel(img, x, y)  , borderline_pixel(img, x+1, y)]  ,
+            [borderline_pixel(img, x-1, y+1), borderline_pixel(img, x, y+1), borderline_pixel(img, x+1, y+1)]]
+    return part
+
+
+def unitary_matrix_filter_operation(img, x, y):
+    part = get_matrix_part(img, x, y)
+    img_matrix = img.load()
+    r_idx = x_idx = 0
+    g_idx = y_idx = 1
+    b_idx = 2
+    r = g = b = 0
+    print("Last Iteration:")
+    for j in range(3):
+        for i in range(3):
+            r += img_matrix[part[i][j][x_idx], part[i][j][y_idx]][r_idx] * Filter.matrix[i][j]
+            g += img_matrix[part[i][j][x_idx], part[i][j][y_idx]][g_idx] * Filter.matrix[i][j]
+            b += img_matrix[part[i][j][x_idx], part[i][j][y_idx]][b_idx] * Filter.matrix[i][j]
+    r = min(max(r, 0), 255)
+    g = min(max(g, 0), 255)
+    b = min(max(b, 0), 255)
+    # Editor.show_pixel([r, g, b])
+    img_matrix[x, y] = tuple([r, g, b] + list(img_matrix[x, y][2:] if len(img_matrix[x, y]) > 2 else []))
+
+
+def apply_matrix_filter(img):
+    for y in range(img.height):
+        for x in range(img.width):
+            unitary_matrix_filter_operation(img, x, y)
+
+
 class Editor(object):
     image = None
     matrix = None
