@@ -29,14 +29,12 @@ def channel_b(img, x, y):
 
 def add_shine(img, x, y):
     if len(Filter.args) >= 1 and Filter.args[0] >= 0:
-        img.matrix[x, y] = tuple(
-            (int(z) + Filter.args[0]) if int(z) + Filter.args[0] <= 255 else 255 for z in img.matrix[x, y])
+        img.matrix[x, y] = tuple(int(min(int(z) + Filter.args[0], 255)) for z in img.matrix[x, y])
 
 
 def mult_shine(img, x, y):
     if len(Filter.args) >= 1 and Filter.args[0] >= 0.0:
-        img.matrix[x, y] = tuple(
-            int(float(z) * Filter.args[0]) if float(z) * Filter.args[0] <= 255.0 else 255 for z in img.matrix[x, y])
+        img.matrix[x, y] = tuple(int(min(float(z) * Filter.args[0], 255.0)) for z in img.matrix[x, y])
 
 
 def negative(img, x, y):
