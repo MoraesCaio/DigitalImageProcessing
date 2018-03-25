@@ -42,10 +42,10 @@ def negative(img, x, y):
 
 
 def set_y_luma(img, x, y):
-    if len(Filter.args >= 1) and Filter.args[0] <= 255.0:
-        vec = img.matrix[x, y][0]
+    if len(Filter.args) >= 1 and Filter.args[0] <= 255.0:
+        vec = img.matrix[x, y]
         y_luma, i, q = to_yiq(vec[0], vec[1], vec[2])
-        img.matrix[x, y] = tuple(to_rgb(Filter.args[0], i, q) + (vec[3:] if len(vec > 2) else []))
+        img.matrix[x, y] = tuple(to_rgb(Filter.args[0], i, q) + (vec[3:] if len(vec) > 2 else []))
 
 
 def to_yiq(r, g, b):
@@ -56,9 +56,9 @@ def to_yiq(r, g, b):
 
 
 def to_rgb(y, i, q):
-    r = max(int(1.000 * y + 0.956 * i + 0.621 * q), 255)
-    g = max(int(1.000 * y - 0.272 * i - 0.647 * q), 255)
-    b = max(int(1.000 * y - 1.106 * i + 1.703 * q), 255)
+    r = min(int(1.000 * y + 0.956 * i + 0.621 * q), 255)
+    g = min(int(1.000 * y - 0.272 * i - 0.647 * q), 255)
+    b = min(int(1.000 * y - 1.106 * i + 1.703 * q), 255)
     return r, g, b
 
 
