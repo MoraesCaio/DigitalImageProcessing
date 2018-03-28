@@ -56,48 +56,38 @@ def to_yiq(r, g, b):
 
 
 def to_rgb(y, i, q):
-    r = min(int(1.000 * y + 0.956 * i + 0.621 * q), 255)
-    g = min(int(1.000 * y - 0.272 * i - 0.647 * q), 255)
-    b = min(int(1.000 * y - 1.106 * i + 1.703 * q), 255)
+    r = valid_rgb(int(1.000 * y + 0.956 * i + 0.621 * q))
+    g = valid_rgb(int(1.000 * y - 0.272 * i - 0.647 * q))
+    b = valid_rgb(int(1.000 * y - 1.106 * i + 1.703 * q))
     return r, g, b
 
 
-def valid_pixel(img, x, y):
-    x_valid = max(min(x, img.width - 1), 0)
-    y_valid = max(min(y, img.height - 1), 0)
-    return x_valid, y_valid
+def valid_rgb(c):
+    return min(255, max(0, c))
 
 
-def get_matrix_part(img, x, y):
-    return [[valid_pixel(img, x - 1, y - 1), valid_pixel(img, x, y - 1), valid_pixel(img, x + 1, y - 1)],
-            [valid_pixel(img, x - 1, y)    , valid_pixel(img, x, y)    , valid_pixel(img, x + 1, y)    ]  ,
-            [valid_pixel(img, x - 1, y + 1), valid_pixel(img, x, y + 1), valid_pixel(img, x + 1, y + 1)]]
+def valid_px(img, x, y):
+    x = min(img.image.width  - 1, max(0, x))
+    y = min(img.image.height - 1, max(0, y))
+    return x, y
 
 
-def unitary_matrix_filter_operation(img, x, y):
-    part = get_matrix_part(img, x, y)
-    img_matrix = img.load()
-    r_idx = x_idx = 0
-    g_idx = y_idx = 1
-    b_idx = 2
-    r = g = b = 0
-    for i in range(3):
-        for j in range(3):
-            r += img_matrix[part[i][j][x_idx], part[i][j][y_idx]][r_idx] * Filter.matrix[i][j]
-            g += img_matrix[part[i][j][x_idx], part[i][j][y_idx]][g_idx] * Filter.matrix[i][j]
-            b += img_matrix[part[i][j][x_idx], part[i][j][y_idx]][b_idx] * Filter.matrix[i][j]
-    r = min(max(r, 0), 255)
-    g = min(max(g, 0), 255)
-    b = min(max(b, 0), 255)
-    # Editor.show_pixel([r, g, b])
-    img_matrix[x, y] = tuple([r, g, b] + list(img_matrix[x, y][2:] if len(img_matrix[x, y]) > 2 else []))
+def valid_part(img, x, y):
+    return [[valid_px(img, x-1, y-1), valid_px(img, x  , y-1), valid_px(img, x+1, y-1)],
+            [valid_px(img, x-1, y  ), valid_px(img, x  , y  ), valid_px(img, x+1, y  )],
+            [valid_px(img, x-1, y+1), valid_px(img, x  , y+1), valid_px(img, x+1, y+1)]]
 
 
-def apply_matrix_filter(img):
-    for y in range(img.height):
-        for x in range(img.width):
-            unitary_matrix_filter_operation(img, x, y)
-
+def apply_filter(img, x, y):
+    p = valid_part(img, x, y)
+    colors = []
+    for c in range(3):
+        total = 0
+        for i in range(3):
+            for j in range(3):
+                total += img.matrix[p[i][j][0], p[i][j][1]][c] * Filter.matrix[i][j]
+        colors.append(valid_rgb(total))
+    img.matrix[x, y] = tuple(colors)# + list(img.matrix[x, y][2:] if len(img.matrix[x, y]) > 2 else []))
 
 class Editor(object):
     image = None
