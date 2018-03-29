@@ -113,7 +113,13 @@ def apply_kernel_float(image, kernel):
 #     return r, g, b
 
 
-def adapt(filename):
+def image_from_array(array):
+    mode = 'RGBA' if array.shape[2] == 4 else 'RGB'
+    formatted_array = np.uint8(np.clip(array, 0, 255))
+    return Image.fromarray(formatted_array, mode)
+
+
+def array_from_file(filename):
     image = Image.open(filename)
     if image.format == 'JPEG':
         if image.mode != 'RGB':
