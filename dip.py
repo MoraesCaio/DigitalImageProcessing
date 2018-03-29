@@ -122,23 +122,20 @@ class ImageMatrix(np.ndarray):
 
         return ImageMatrix.format_image_array(result)
 
+    def to_yiq(self):
+        t = np.array([[0.299, 0.587, 0.114], [0.596, -0.274, -0.322], [0.211, -0.523, 0.312]])
+        fl_copy = np.float64(np.copy(self[:, :, :3]))
+        result = fl_copy.dot(t.T) / 255
+        return result.view(ImageMatrix)
+
+    def to_rgb(self):
+        t = np.array([[1.000, 0.956, 0.621], [1.000, -0.272, -0.647], [1.000, -1.106, 1.703]])
+        fl_copy = np.float64(np.copy(self[:, :, :3]))
+        result = fl_copy.dot(t.T) * 255.0
+        return ImageMatrix.format_image_array(result)
 
 # def set_y_luma(img, x, y):
 #     if len(Filter.args) >= 1 and Filter.args[0] <= 255.0:
 #         vec = img.matrix[x, y]
 #         y_luma, i, q = to_yiq(vec[0], vec[1], vec[2])
 #         img.matrix[x, y] = tuple(to_rgb(Filter.args[0], i, q) + (vec[3:] if len(vec) > 2 else []))
-
-
-# def to_yiq(r, g, b):
-#     y = 0.299 * r + 0.587 * g + 0.114 * b
-#     i = 0.596 * r - 0.274 * g - 0.322 * b
-#     q = 0.211 * r - 0.523 * g + 0.312 * b
-#     return y, i, q
-
-
-# def to_rgb(y, i, q):
-#     r = valid_rgb(int(1.000 * y + 0.956 * i + 0.621 * q))
-#     g = valid_rgb(int(1.000 * y - 0.272 * i - 0.647 * q))
-#     b = valid_rgb(int(1.000 * y - 1.106 * i + 1.703 * q))
-#     return r, g, b
