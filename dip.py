@@ -46,20 +46,46 @@ def apply_kernel(image, kernel):
     result = np.int16(np.copy(image))
 
     # adding margins
-    image_padded = np.int16(np.zeros([image.shape[0]+2, image.shape[1]+2, image.shape[2]]))
-    image_padded[1:-1, 1:-1] = image
+    hks = (kernel.shape[0]-1)/2 # half_kernel_size
+    image_padded = np.int16(np.zeros([image.shape[0]+2*hks, image.shape[1]+2*hks, image.shape[2]]))
+    image_padded[hks:-hks, hks:-hks] = image
 
     # extension padding on edges
-    image_padded[0, :] = image_padded[1, :]
-    image_padded[:, 0] = image_padded[:, 1]
-    image_padded[-1, :] = image_padded[-2, :]
-    image_padded[:, -1] = image_padded[:, -2]
+    image_padded[0:hks, :] = image_padded[hks:hks+1, :]
+    image_padded[:, 0:hks] = image_padded[:, hks:hks+1]
+    image_padded[-1: -(hks+1):-1, :] = image_padded[-(hks+1):-(hks+2):-1, :]
+    image_padded[:, -1: -(hks+1):-1] = image_padded[:, -(hks+1):-(hks+2):-1]
 
     # kernel application
     for x in range(image.shape[1]):
         for y in range(image.shape[0]):
             for c in range(3):
-                result[y, x, c] = (image_padded[y:y+3, x:x+3, c] * kernel).sum()
+                result[y, x, c] = (image_padded[y:y+kernel.shape[0], x:x+kernel.shape[0], c] * kernel).sum()
+
+    return Image.fromarray(np.uint8(np.clip(result, 0, 255)), ('RGBA' if result.shape[2] == 4 else 'RGB'))
+
+
+def apply_kernel_float(image, kernel):
+    kernel = np.flipud(np.fliplr(np.copy(kernel)))
+    result = np.float64(np.copy(image))
+
+    # adding margins
+    hks = (kernel.shape[0]-1)/2 # half_kernel_size
+    image_padded = np.zeros([image.shape[0]+2*hks, image.shape[1]+2*hks, image.shape[2]])
+    image_padded[hks:-hks, hks:-hks] = image
+
+    # extension padding on edges
+    image_padded[0:hks, :] = image_padded[hks:hks+1, :]
+    image_padded[:, 0:hks] = image_padded[:, hks:hks+1]
+    image_padded[-1: -(hks+1):-1, :] = image_padded[-(hks+1):-(hks+2):-1, :]
+    image_padded[:, -1: -(hks+1):-1] = image_padded[:, -(hks+1):-(hks+2):-1]
+    image_padded = np.float64(image_padded)
+
+    # kernel application
+    for x in range(image.shape[1]):
+        for y in range(image.shape[0]):
+            for c in range(3):
+                result[y, x, c] = (image_padded[y:y+kernel.shape[0], x:x+kernel.shape[0], c] * kernel).sum()
 
     return Image.fromarray(np.uint8(np.clip(result, 0, 255)), ('RGBA' if result.shape[2] == 4 else 'RGB'))
 
