@@ -1,44 +1,67 @@
 from PIL import Image
+import numpy as np
 
 
 class Filter(object):
-    matrix = [[0, 0, 0],
-              [0, 1, 0],
-              [0, 0, 0]]
+    # 0 - identity, 1 - sharpen, 2 - second kernel, 3 - blur
+    matrixes = [np.array([[0, 0, 0], [0, 1, 0], [0, 0,  0]]), np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]]),
+              np.array([[0, 0, 0], [0, 1, 0], [0, 0, -1]]), np.array([[1,  1, 1], [ 1, 1,  1], [1,  1, 1]])]
+
     args = []
 
-
-def channel(img, x, y, i):
-    img.matrix[x, y] = tuple([0] * i + [img.matrix[x, y][i]] + ([0] * (len(img.matrix[x, y]) - (i + 1))))
-
-
-def channel_r(img, x, y):
-    # (r,g,b,[a]) -> (r,0,0,[0])
-    channel(img, x, y, 0)
+    channels = {'k':[0, 0, 0], 'b':[0, 0, 1],
+                'g':[0, 1, 0], 'c':[0, 1, 1],
+                'r':[1, 0, 0], 'm':[1, 0, 1],
+                'y':[1, 1, 0], 'w':[1, 1, 1]}
 
 
-def channel_g(img, x, y):
-    # (r,g,b,[a]) -> (0,g,0,[0])
-    channel(img, x, y, 1)
+def channel(image, channel_array):
+    channel_array = np.array(channel_array, dtype='uint8')
+    product = np.copy(image)
+    product[:, :, :3] = image[:, :, :3] * channel_array[:3]
+    return Image.fromarray(product, 'RGBA')
 
 
-def channel_b(img, x, y):
-    # (r,g,b,[a]) -> (0,0,b,[0])
-    channel(img, x, y, 2)
+def add_shine(image, operand):
+    result = np.int16(np.copy(image))
+    result[:, :, :3] += operand
+    return Image.fromarray(np.uint8(np.clip(result, 0, 255)), ('RGBA' if result.shape[2] == 4 else 'RGB'))
 
 
-def add_shine(img, x, y):
-    if len(Filter.args) >= 1 and Filter.args[0] >= 0:
-        img.matrix[x, y] = tuple(int(min(int(z) + Filter.args[0], 255)) for z in img.matrix[x, y])
+def mult_shine(image, operand):
+    result = np.float64(np.copy(image))
+    result[:, :, :3] *= operand
+    return Image.fromarray(np.uint8(np.clip(result, 0, 255)), ('RGBA' if result.shape[2] == 4 else 'RGB'))
 
 
-def mult_shine(img, x, y):
-    if len(Filter.args) >= 1 and Filter.args[0] >= 0.0:
-        img.matrix[x, y] = tuple(int(min(float(z) * Filter.args[0], 255.0)) for z in img.matrix[x, y])
+def negative(image):
+    # keeps alpha channel's values
+    result = np.copy(image)
+    result[:, :, :3] = 255 - result[:, :, :3]
+    return Image.fromarray(result, ('RGBA' if result.shape[2] == 4 else 'RGB'))
 
 
-def negative(img, x, y):
-    img.matrix[x, y] = tuple(255 - x for x in img.matrix[x, y])
+def apply_kernel(image, kernel):
+    kernel = np.flipud(np.fliplr(np.copy(kernel)))
+    result = np.int16(np.copy(image))
+
+    # adding margins
+    image_padded = np.int16(np.zeros([image.shape[0]+2, image.shape[1]+2, image.shape[2]]))
+    image_padded[1:-1, 1:-1] = image
+
+    # extension padding on edges
+    image_padded[0, :] = image_padded[1, :]
+    image_padded[:, 0] = image_padded[:, 1]
+    image_padded[-1, :] = image_padded[-2, :]
+    image_padded[:, -1] = image_padded[:, -2]
+
+    # kernel application
+    for x in range(image.shape[1]):
+        for y in range(image.shape[0]):
+            for c in range(3):
+                result[y, x, c] = (image_padded[y:y+3, x:x+3, c] * kernel).sum()
+
+    return Image.fromarray(np.uint8(np.clip(result, 0, 255)), ('RGBA' if result.shape[2] == 4 else 'RGB'))
 
 
 def set_y_luma(img, x, y):
@@ -94,17 +117,28 @@ class Editor(object):
     matrix = None
 
     def __init__(self, image):
-        self.image = image
-        self.matrix = self.image.load()
+        self.image = Editor.adapt(image)
+        self.matrix = np.swapaxes(np.array(self.image), 1, 0)
 
     def set_image(self, image):
-        self.image = image
-        self.matrix = image.load()
+        self.image = Editor.adapt(image)
+        self.matrix = np.swapaxes(np.array(self.image), 1, 0)
 
     def iterate(self, function):
         for y in range(self.image.height):
             for x in range(self.image.width):
                 function(self, x, y)
+
+    @staticmethod
+    def adapt(filename):
+        image = Image.open(filename)
+        if image.format == 'JPEG':
+            if image.mode != 'RGB':
+                image = image.convert('RGB')
+        elif image.format == 'PNG':
+            if image.mode != 'RGBA':
+                image = image.convert('RGBA')
+        return np.array(image)
 
     @staticmethod
     def show_pixel(pixel):
