@@ -19,80 +19,108 @@ class Filter(object):
                 'y': [1, 1, 0], 'w': [1, 1, 1]}
 
 
-def channel(image, channel_array):
-    channel_array = np.array(channel_array, dtype='uint8')
-    product = np.copy(image)
-    product[:, :, :3] = image[:, :, :3] * channel_array[:3]
-    return Image.fromarray(product, 'RGBA')
+class ImageMatrix(np.ndarray):
 
+    # Subclassing numpy.array
+    def __new__(cls, *args, **kwargs):
+        return super(ImageMatrix, cls).__new__(cls, *args, **kwargs)
 
-def add_shine(image, operand):
-    result = np.int16(np.copy(image))
-    result[:, :, :3] += operand
-    return Image.fromarray(np.uint8(np.clip(result, 0, 255)), ('RGBA' if result.shape[2] == 4 else 'RGB'))
+    def __init__(self, *args, **kwargs):
+        pass
 
+    def __array_finalize__(self, obj):
+        pass
 
-def mult_shine(image, operand):
-    result = np.float64(np.copy(image))
-    result[:, :, :3] *= operand
-    return Image.fromarray(np.uint8(np.clip(result, 0, 255)), ('RGBA' if result.shape[2] == 4 else 'RGB'))
+    # Interface methods
+    @staticmethod
+    def from_file(filename):
+        image = Image.open(filename)
+        if image.format == 'JPEG':
+            if image.mode != 'RGB':
+                image = image.convert('RGB')
+        elif image.format == 'PNG':
+            if image.mode != 'RGBA':
+                image = image.convert('RGBA')
+        return np.array(image).view(ImageMatrix)
 
+    def get_image(self):
+        mode = 'RGBA' if self.shape[2] == 4 else 'RGB'
+        return Image.fromarray(ImageMatrix.format_image_array(self), mode)
 
-def negative(image):
-    # keeps alpha channel's values
-    result = np.copy(image)
-    result[:, :, :3] = 255 - result[:, :, :3]
-    return Image.fromarray(result, ('RGBA' if result.shape[2] == 4 else 'RGB'))
+    @staticmethod
+    def format_image_array(img_array):
+        return np.uint8(np.clip(img_array, 0, 255)).view(ImageMatrix)
 
+    # Processing methods
+    def channel(self, channel_array):
+        channel_array = np.array(channel_array, dtype='uint8')
+        product = np.copy(self)
+        product[:, :, :3] = self[:, :, :3] * channel_array[:3]
+        return ImageMatrix.format_image_array(product)
 
-def apply_kernel(image, kernel):
-    kernel = np.flipud(np.fliplr(np.copy(kernel)))
-    result = np.int16(np.copy(image))
+    def add_shine(self, operand):
+        result = np.int16(np.copy(self))
+        result[:, :, :3] += operand
+        return ImageMatrix.format_image_array(result)
 
-    # adding margins
-    hks = (kernel.shape[0]-1)/2  # half_kernel_size
-    image_padded = np.zeros([image.shape[0]+2*hks, image.shape[1]+2*hks, image.shape[2]])
-    image_padded[hks:-hks, hks:-hks] = image
+    def mult_shine(self, operand):
+        result = np.float64(np.copy(self))
+        result[:, :, :3] *= operand
+        return ImageMatrix.format_image_array(result)
 
-    # extension padding on edges
-    image_padded[0:hks, :] = image_padded[hks:hks+1, :]
-    image_padded[:, 0:hks] = image_padded[:, hks:hks+1]
-    image_padded[-1: -(hks+1):-1, :] = image_padded[-(hks+1):-(hks+2):-1, :]
-    image_padded[:, -1: -(hks+1):-1] = image_padded[:, -(hks+1):-(hks+2):-1]
-    image_padded = np.int16(image_padded)
+    def negative(self):
+        # keeps alpha channel's values
+        result = np.copy(self)
+        result[:, :, :3] = 255 - result[:, :, :3]
+        return ImageMatrix.format_image_array(result)
 
-    # kernel application
-    for x in range(image.shape[1]):
-        for y in range(image.shape[0]):
-            for c in range(3):
-                result[y, x, c] = (image_padded[y:y+kernel.shape[0], x:x+kernel.shape[0], c] * kernel).sum()
+    def apply_kernel(self, kernel):
+        kernel = np.flipud(np.fliplr(np.copy(kernel)))
+        result = np.int16(np.copy(self))
 
-    return Image.fromarray(np.uint8(np.clip(result, 0, 255)), ('RGBA' if result.shape[2] == 4 else 'RGB'))
+        # adding margins
+        hks = (kernel.shape[0]-1)/2  # half_kernel_size
+        image_padded = np.zeros([self.shape[0] + 2 * hks, self.shape[1] + 2 * hks, self.shape[2]])
+        image_padded[hks:-hks, hks:-hks] = self
 
+        # extension padding on edges
+        image_padded[0:hks, :] = image_padded[hks:hks+1, :]
+        image_padded[:, 0:hks] = image_padded[:, hks:hks+1]
+        image_padded[-1: -(hks+1):-1, :] = image_padded[-(hks+1):-(hks+2):-1, :]
+        image_padded[:, -1: -(hks+1):-1] = image_padded[:, -(hks+1):-(hks+2):-1]
+        image_padded = np.int16(image_padded)
 
-def apply_kernel_float(image, kernel):
-    kernel = np.flipud(np.fliplr(np.copy(kernel)))
-    result = np.float64(np.copy(image))
+        # kernel application
+        for x in range(self.shape[1]):
+            for y in range(self.shape[0]):
+                for c in range(3):
+                    result[y, x, c] = (image_padded[y:y+kernel.shape[0], x:x+kernel.shape[0], c] * kernel).sum()
 
-    # adding margins
-    hks = (kernel.shape[0]-1)/2  # half_kernel_size
-    image_padded = np.zeros([image.shape[0]+2*hks, image.shape[1]+2*hks, image.shape[2]])
-    image_padded[hks:-hks, hks:-hks] = image
+        return ImageMatrix.format_image_array(result)
 
-    # extension padding on edges
-    image_padded[0:hks, :] = image_padded[hks:hks+1, :]
-    image_padded[:, 0:hks] = image_padded[:, hks:hks+1]
-    image_padded[-1: -(hks+1):-1, :] = image_padded[-(hks+1):-(hks+2):-1, :]
-    image_padded[:, -1: -(hks+1):-1] = image_padded[:, -(hks+1):-(hks+2):-1]
-    image_padded = np.float64(image_padded)
+    def apply_kernel_float(self, kernel):
+        kernel = np.flipud(np.fliplr(np.copy(kernel)))
+        result = np.float64(np.copy(self))
 
-    # kernel application
-    for x in range(image.shape[1]):
-        for y in range(image.shape[0]):
-            for c in range(3):
-                result[y, x, c] = (image_padded[y:y+kernel.shape[0], x:x+kernel.shape[0], c] * kernel).sum()
+        # adding margins
+        hks = (kernel.shape[0]-1)/2  # half_kernel_size
+        image_padded = np.zeros([self.shape[0] + 2 * hks, self.shape[1] + 2 * hks, self.shape[2]])
+        image_padded[hks:-hks, hks:-hks] = self
 
-    return Image.fromarray(np.uint8(np.clip(result, 0, 255)), ('RGBA' if result.shape[2] == 4 else 'RGB'))
+        # extension padding on edges
+        image_padded[0:hks, :] = image_padded[hks:hks+1, :]
+        image_padded[:, 0:hks] = image_padded[:, hks:hks+1]
+        image_padded[-1: -(hks+1):-1, :] = image_padded[-(hks+1):-(hks+2):-1, :]
+        image_padded[:, -1: -(hks+1):-1] = image_padded[:, -(hks+1):-(hks+2):-1]
+        image_padded = np.float64(image_padded)
+
+        # kernel application
+        for x in range(self.shape[1]):
+            for y in range(self.shape[0]):
+                for c in range(3):
+                    result[y, x, c] = (image_padded[y:y+kernel.shape[0], x:x+kernel.shape[0], c] * kernel).sum()
+
+        return ImageMatrix.format_image_array(result)
 
 
 # def set_y_luma(img, x, y):
@@ -114,20 +142,3 @@ def apply_kernel_float(image, kernel):
 #     g = valid_rgb(int(1.000 * y - 0.272 * i - 0.647 * q))
 #     b = valid_rgb(int(1.000 * y - 1.106 * i + 1.703 * q))
 #     return r, g, b
-
-
-def image_from_array(array):
-    mode = 'RGBA' if array.shape[2] == 4 else 'RGB'
-    formatted_array = np.uint8(np.clip(array, 0, 255))
-    return Image.fromarray(formatted_array, mode)
-
-
-def array_from_file(filename):
-    image = Image.open(filename)
-    if image.format == 'JPEG':
-        if image.mode != 'RGB':
-            image = image.convert('RGB')
-    elif image.format == 'PNG':
-        if image.mode != 'RGBA':
-            image = image.convert('RGBA')
-    return np.array(image)
