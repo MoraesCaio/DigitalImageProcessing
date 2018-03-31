@@ -134,6 +134,33 @@ class ImageMatrix(np.ndarray):
         result = fl_copy.dot(t.T) * 255.0
         return ImageMatrix.format_image_array(result)
 
+    def median(self, kernel):
+        result = np.int16(np.copy(self))
+
+        # adding margins
+        hks = (kernel.shape[0]-1)/2  # half_kernel_size
+        image_padded = np.zeros([self.shape[0] + 2 * hks, self.shape[1] + 2 * hks, self.shape[2]])
+        image_padded[hks:-hks, hks:-hks] = self
+
+        # extension padding on edges
+        image_padded[0:hks, :] = image_padded[hks:hks+1, :]
+        image_padded[:, 0:hks] = image_padded[:, hks:hks+1]
+        image_padded[-1: -(hks+1):-1, :] = image_padded[-(hks+1):-(hks+2):-1, :]
+        image_padded[:, -1: -(hks+1):-1] = image_padded[:, -(hks+1):-(hks+2):-1]
+        image_padded = np.int16(image_padded)
+
+        # median application
+        for x in range(self.shape[1]):
+            for y in range(self.shape[0]):
+                for c in range(3):
+                    copy1d = image_padded[y:y+kernel.shape[0], x:x+kernel.shape[0], c].flatten()
+                    copy1d.sort()
+                    result[y, x, c] = copy1d[hks+1]
+                    # does not work! kernel must not be applied over a backup array
+                    # image_padded[y+hks, x+hks, c] = copy1d[hks+1] 
+
+        return ImageMatrix.format_image_array(result)
+
 # def set_y_luma(img, x, y):
 #     if len(Filter.args) >= 1 and Filter.args[0] <= 255.0:
 #         vec = img.matrix[x, y]
