@@ -41,7 +41,7 @@ class ImageMatrix(np.ndarray):
         elif image.format == 'PNG':
             if image.mode != 'RGBA':
                 image = image.convert('RGBA')
-        return np.array(image).view(self.__class__)
+        return np.array(image).view(ImageMatrix)
 
     def get_image(self):
         mode = 'RGBA' if self.shape[2] == 4 else 'RGB'
@@ -49,7 +49,7 @@ class ImageMatrix(np.ndarray):
 
     @staticmethod
     def format_image_array(img_array):
-        return np.uint8(np.clip(img_array, 0, 255)).view(self.__class__)
+        return np.uint8(np.clip(img_array, 0, 255)).view(ImageMatrix)
 
     # Processing methods
     def channel(self, channel_array):
@@ -114,6 +114,7 @@ class ImageMatrix(np.ndarray):
         return ImageMatrix.format_image_array(output.run_kernel_loop(image_padded, kernel))
 
     def median(self, kernel):
+        hks = (kernel.shape[0] - 1) / 2
         output = np.int16(np.copy(self))
 
         image_padded = np.int16(self.extension_padded(kernel))
