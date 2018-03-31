@@ -93,13 +93,14 @@ class ImageMatrix(np.ndarray):
         return image_padded.view(self.__class__)
 
     def run_kernel_loop(self, image_padded, kernel):
+        copy = np.copy(self)
         # kernel application
-        for x in range(self.shape[1]):
-            for y in range(self.shape[0]):
+        for x in range(copy.shape[1]):
+            for y in range(copy.shape[0]):
                 for c in range(3):
-                    self[y, x, c] = (image_padded[y:y+kernel.shape[0], x:x+kernel.shape[0], c] * kernel).sum()
+                    copy[y, x, c] = (image_padded[y:y+kernel.shape[0], x:x+kernel.shape[0], c] * kernel).sum()
 
-        return self
+        return copy
 
     def apply_kernel(self, kernel):
         kernel = np.flipud(np.fliplr(np.copy(kernel)))
