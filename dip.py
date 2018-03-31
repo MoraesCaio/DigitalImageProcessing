@@ -174,6 +174,40 @@ class ImageMatrix(np.ndarray):
                 copy[y, x, :3] = np.array([l, l, l])
         return ImageMatrix.format_image_array(copy)
 
+    @staticmethod
+    def is_float(data):
+        if   isinstance(data, np.float64):
+            return True
+        elif isinstance(data, np.float64):
+            return True
+        elif isinstance(data, np.float64):
+            return True
+        return False
+
+    def y_threshold(self, minimum=0.0, maximum=1.0):
+        copy = np.copy(self).view(self.__class__)
+
+        if not ImageMatrix.is_float(self[0, 0, 0]):
+            return copy
+
+        y = copy[:, :, 0]
+        y[y < minimum] = minimum
+        y[y > maximum] = maximum
+
+        return copy
+
+    def y_threshold_mean(self):
+        copy = np.copy(self).view(self.__class__)
+
+        if not ImageMatrix.is_float(self[0, 0, 0]):
+            return copy
+
+        y = copy[:, :, 0]
+        mean = np.average(y)
+        y[:, :] = mean
+
+        return y
+
 
 # def set_y_luma(img, x, y):
 #     if len(Filter.args) >= 1 and Filter.args[0] <= 255.0:
