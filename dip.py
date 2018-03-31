@@ -82,7 +82,7 @@ class ImageMatrix(np.ndarray):
         # adding margins
         hks = (kernel.shape[0]-1)/2  # half_kernel_size
         image_padded = np.zeros([self.shape[0] + 2 * hks, self.shape[1] + 2 * hks, self.shape[2]])
-        image_padded[hks:-hks, hks:-hks] = self
+        image_padded[hks:-hks, hks:-hks] = np.copy(self)
 
         # extension padding on edges
         image_padded[0:hks, :] = image_padded[hks:hks+1, :]
@@ -90,7 +90,7 @@ class ImageMatrix(np.ndarray):
         image_padded[-1: -(hks+1):-1, :] = image_padded[-(hks+1):-(hks+2):-1, :]
         image_padded[:, -1: -(hks+1):-1] = image_padded[:, -(hks+1):-(hks+2):-1]
 
-        return image_padded
+        return image_padded.view(self.__class__)
 
     def run_kernel_loop(self, image_padded, kernel):
         # kernel application
