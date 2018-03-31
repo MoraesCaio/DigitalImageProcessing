@@ -148,6 +148,33 @@ class ImageMatrix(np.ndarray):
         result = fl_copy.dot(t.T) * 255.0
         return ImageMatrix.format_image_array(result)
 
+    def sobel(self):
+        print('Calculating Gx component...')
+        kernel = np.flipud(np.fliplr(np.copy(Filter.kernels['gx'])))
+        gx = np.int32(np.copy(self)).view(self.__class__)
+        image_padded = np.int32(self.extension_padded(kernel))
+        gx = gx.run_kernel_loop(image_padded, kernel)
+
+        print('Calculating Gy component...')
+        kernel = np.flipud(np.fliplr(np.copy(Filter.kernels['gy'])))
+        gy = np.int32(np.copy(self)).view(self.__class__)
+        image_padded = np.int32(self.extension_padded(kernel))
+        gy = gy.run_kernel_loop(image_padded, kernel)
+
+        print('Calculating G...')
+        g = np.sqrt(np.power(gx, 2) + np.power(gy, 2))
+        return ImageMatrix.format_image_array(g)
+
+    def grey(self):
+        copy = np.copy(self)
+        factor = np.array([299.0/1000, 587.0/1000, 114.0/1000])
+        for x in range(self.shape[1]):
+            for y in range(self.shape[0]):
+                l = (copy[y, x] * factor).sum()
+                copy[y, x, :3] = np.array([l, l, l])
+        return ImageMatrix.format_image_array(copy)
+
+
 # def set_y_luma(img, x, y):
 #     if len(Filter.args) >= 1 and Filter.args[0] <= 255.0:
 #         vec = img.matrix[x, y]
