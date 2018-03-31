@@ -4,10 +4,14 @@ import numpy as np
 
 class Filter(object):
 
-    kernels = {'identity':     np.array([[0,  0, 0], [ 0, 1,  0], [0,  0,  0]]),
-               'sharpen':      np.array([[0, -1, 0], [-1, 5, -1], [0, -1,  0]]),
-               'other_kernel': np.array([[0,  0, 0], [ 0, 1,  0], [0,  0, -1]]),
-               'blur':         np.array([[1,  1, 1], [ 1, 1,  1], [1,  1,  1]])
+    kernels = {'identity':     np.array([[0,  0,  0], [ 0,  1,  0], [ 0,  0,  0]]),
+               'sharpen':      np.array([[0, -1,  0], [-1,  5, -1], [ 0, -1,  0]]),
+               'other_kernel': np.array([[0,  0,  0], [ 0,  1,  0], [ 0,  0, -1]]),
+               'blur':         np.array([[1,  1,  1], [ 1,  1,  1], [ 1,  1,  1]]),
+               'gx':           np.array([[1,  0, -1], [ 2,  0, -2], [ 1,  0, -1]]),
+               'gy':           np.array([[1,  2,  1], [ 0,  0,  0], [-1, -2, -1]]),
+               'log4n':        np.array([[0,  1,  0], [ 1, -4,  1], [ 0,  1,  0]]),
+               'log8n':        np.array([[1,  1,  1], [ 1, -8,  1], [ 1,  1,  1]]),
                }
 
     kernels_float = {'mean': np.array([[1.0/9, 1.0/9, 1.0/9], [1.0/9, 1.0/9, 1.0/9], [1.0/9, 1.0/9, 1.0/9]])
