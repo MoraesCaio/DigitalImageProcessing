@@ -1,18 +1,20 @@
-from PIL import Image
 import dip
-from dip import Editor
 from dip import Filter
-
-filename = ['test.jpeg', 'test2.png']
-
-# for i in range(0, 100, 10):
-# x = float(i)*2.0/10.0 + 1.0
-
-petala = Editor(Image.open(filename[0]))
-Filter.args = [2]
-petala.iterate(dip.negative)
-petala.image.save('Negative.jpeg', 'JPEG')
+from dip import ImageMatrix
+from dip import Routine
+import numpy as np
 
 
-# petala.image.show()
+filename = ['test.jpeg', 'test2.png', '1px.png', 'petala.png', 'SnPnoise.png', 'valve.png', 'bike.jpg',
+            'xray.jpeg', 'xray2.jpeg']
 
+# petala = ImageMatrix.from_file(filename[3])
+# noise = ImageMatrix.from_file(filename[4])
+# valve = ImageMatrix.from_file(filename[5])
+# bike = ImageMatrix.from_file(filename[6])
+# xray1 = ImageMatrix.from_file(filename[7])
+# xray2 = ImageMatrix.from_file(filename[8])
+
+petala = Routine("petala.png")
+petala.threshold_y()
+petala.threshold_mean_y()
