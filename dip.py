@@ -394,3 +394,91 @@ class ImageMatrix(np.ndarray):
         return copy
 
 
+class Routine(object):
+    """Facade for common processes with creation of files.
+
+    Attributes:
+        filename         String containing the name (path) of the file (including its extension!).
+        name             String, extracted from filename (on object's initialization),
+                            containing only the name of the file.
+        ext              String, extracted from filename (on object's initialization),
+                            containing only the extension of the file.
+        img_mtx          The locale where these birds congregate to reproduce.
+    """
+
+    filename = ''
+    name = ''
+    ext = ''
+    img_mtx = None
+
+    def __init__(self, filename):
+        self.filename = filename
+        split = splitext(filename)
+        self.name = split[0]
+        self.ext = split[1]
+        self.img_mtx = ImageMatrix.from_file(filename)
+
+    def channel(self):
+        for key, val in Filter.channels.iteritems():
+            self.img_mtx.channel(val).get_image().save(self.name+'Channel'+key.upper()+self.ext)
+
+    def add_shine(self):
+        for i in np.arange(40, 161, 40):
+            self.img_mtx.add_shine(i).get_image().save(self.name+'AddShine'+str(i)+self.ext)
+
+    def add_shine_y(self):
+        for f in np.arange(0.2, 1., 0.3):
+            self.img_mtx.to_yiq().add_shine_y(f).to_rgb().get_image().save(self.name+'AddShineY'+"{0:.1f}".format(f).replace('.', '-')+self.ext)
+
+    def mult_shine(self):
+        for f in np.arange(1.2, 2.8, 0.5):
+            self.img_mtx.mult_shine(f).get_image().save(self.name+'MultShine'+str(f).replace('.', '-')+self.ext)
+
+    def mult_shine_y(self):
+        for f in np.arange(1.5, 3.2, 0.8):
+            self.img_mtx.to_yiq().mult_shine_y(f).to_rgb().get_image().save(self.name+'MultShineY'+"{0:.1f}".format(f).replace('.', '-')+self.ext)
+
+    def negative(self):
+        self.img_mtx.negative().get_image().save(self.name+'Negative'+self.ext)
+        
+    def negative_y(self):
+        self.img_mtx.negative_y().get_image().save(self.name + "Negative_y" + self.ext)
+        
+    def sharpen(self):
+        self.img_mtx.apply_kernel(Filter.kernels['sharpen']).get_image().save(self.name+'Sharpen'+self.ext)
+    
+    def other_kernel(self):
+        self.img_mtx.apply_kernel(Filter.kernels['other_kernel']).get_image().save(self.name+'OtherKernel'+self.ext)
+        
+    def median(self):
+        self.img_mtx.median(Filter.kernels['blur']).get_image().save(self.name+'Median'+self.ext)
+
+    def sharpening_through_mean(self):
+        mean = self.img_mtx.apply_kernel_float(Filter.kernels_float['mean'])
+        mean.get_image().save(self.name+'Mean'+self.ext)
+        
+        img_mtx_fl64 = np.float64(self.img_mtx[:, :, :3])
+        variance_fl64 = img_mtx_fl64 - mean[:, :, :3]
+        variance_fl64.get_image().save(self.name+'MeanVariance'+self.ext)
+
+        sharpen_mean_fl64 = img_mtx_fl64 + variance_fl64
+        ImageMatrix.format_image_array(sharpen_mean_fl64).get_image().save(self.name+'MeanSharpen'+self.ext)
+
+    def laplacian(self):
+        self.img_mtx.apply_kernel(Filter.kernels['log4n']).get_image().save(self.name+'LoG4N'+self.ext)
+        self.img_mtx.apply_kernel(Filter.kernels['log4n']*-1).get_image().save(self.name+'LoG4P'+self.ext)
+        self.img_mtx.apply_kernel(Filter.kernels['log8n']).get_image().save(self.name+'LoG8N'+self.ext)
+        self.img_mtx.apply_kernel(Filter.kernels['log8n']*-1).get_image().save(self.name+'LoG8P'+self.ext)
+                
+    def sobel(self):
+        gx = self.img_mtx.gx_component()
+        gx.get_image().save(self.name+'SobelGx'+self.ext)
+        gy = self.img_mtx.gy_component()
+        gy.get_image().save(self.name+'SobelGy'+self.ext)
+        self.img_mtx.sobel([gx, gy]).get_image().save(self.name+'Sobel'+self.ext)
+
+    def threshold_y(self, minimum=0.2, maximum=0.7):
+        self.img_mtx.to_yiq().threshold_y(minimum, maximum).to_rgb().get_image().save(self.name+'ThresholdY'+self.ext)
+
+    def threshold_mean_y(self):
+        self.img_mtx.to_yiq().threshold_mean_y().to_rgb().get_image().save(self.name+'ThresholdMeanY'+self.ext)
