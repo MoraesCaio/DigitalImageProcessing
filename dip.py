@@ -15,7 +15,9 @@ class Filter(object):
                'log8n':        np.array([[1,  1,  1], [ 1, -8,  1], [ 1,  1,  1]]),
                }
 
-    kernels_float = {'mean': np.array([[1.0/9, 1.0/9, 1.0/9], [1.0/9, 1.0/9, 1.0/9], [1.0/9, 1.0/9, 1.0/9]])
+    kernels_float = {'mean3': np.ones([3] * 2, dtype='float64') / 3 ** 2,
+                     'mean5': np.ones([5] * 2, dtype='float64') / 5 ** 2,
+                     'mean7': np.ones([7] * 2, dtype='float64') / 7 ** 2,
                      }
 
     channels = {'k': [0, 0, 0], 'b': [0, 0, 1],
@@ -389,7 +391,8 @@ class ImageMatrix(np.ndarray):
 
         y = copy[:, :, 0]
         mean = np.average(y)
-        y[:, :] = mean
+        y[y > mean] = 1.0
+        y[y <= mean] = 0.0
 
         return copy
 
