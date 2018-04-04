@@ -361,11 +361,10 @@ class ImageMatrix(np.ndarray):
             return True
         return False
 
-    def threshold_y(self, minimum=0.0, maximum=1.0):
+    def threshold_y(self, m=0.5):
         """
-        Applies threshold values over Y (luma) component outliers.\n
-        :param minimum: float minimum value for Y component.
-        :param maximum: float maximum value for Y component.
+        Applies threshold values over Y (luma) component's values.\n
+        :param m: float value for Y component threshold.
         :return: float YIQ ImageMatrix
         """
         copy = np.copy(self).view(self.__class__)
@@ -374,14 +373,14 @@ class ImageMatrix(np.ndarray):
             return copy
 
         y = copy[:, :, 0]
-        y[y < minimum] = minimum
-        y[y > maximum] = maximum
+        y[y > m] = 1.0
+        y[y <= m] = 0.0
 
         return copy
 
     def threshold_mean_y(self):
         """
-        Replaces Y (luma) component values by its mean.\n
+        Places a threshold over Y (luma) component values equal to its mean.\n
         :return: float YIQ ImageMatrix
         """
         copy = np.copy(self).view(self.__class__)
