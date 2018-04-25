@@ -412,6 +412,28 @@ class ImageMatrix(np.ndarray):
 
         return copy
 
+    def histogram_expansion(self):
+        """
+        Performs histogram expansion.\n
+        :return: Formatted uint8 ImageMatrix
+        """
+        n_max = [0 for i in range(3)]
+        n_min = [255 for i in range(3)]
+
+        copy = np.copy(self)
+        for x in range(self.shape[1]):
+            for y in range(self.shape[0]):
+                # Find maximum and minimum values in image
+                for i in range(0, 2):
+                    n_max[i] = max(n_max[i], copy[y][x][i])
+                    n_min[i] = min(n_min[i], copy[y][x][i])
+
+        for x in range(self.shape[1]):
+            for y in range(self.shape[0]):
+                for i in range(0, 2):
+                    copy[y][x][i] = round(((copy[y][x][i] - n_min[i]) / (n_max[i] - n_min[i])) * (255))
+
+        return ImageMatrix.format_image_array(copy)
 
 class Routine(object):
     """Facade for common processes with creation of files.
@@ -517,3 +539,6 @@ class Routine(object):
         central = kernel.shape[0] // 2
         kernel[central, central] += d
         self.img_mtx.apply_kernel(kernel).get_image().save(self.name + 'Sharpen{0}c{1}d{2}'.format(kernel_type, c, d) + self.ext)
+
+    def expansion(self):
+        self.img_mtx.histogram_expansion().get_image().save(self.name+'Expanded'+self.ext)
