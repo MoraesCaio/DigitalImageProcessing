@@ -13,6 +13,13 @@ class Filter(object):
                'gy':           np.array([[1,  2,  1], [ 0,  0,  0], [-1, -2, -1]]),
                'log4n':        np.array([[0,  1,  0], [ 1, -4,  1], [ 0,  1,  0]]),
                'log8n':        np.array([[1,  1,  1], [ 1, -8,  1], [ 1,  1,  1]]),
+               'border1':      np.array([[-0.125, -0.125, -0.125], [ -0.125,  1, -0.125], [-0.125, -0.125, -0.125]]),
+               'border2':      np.array([[-1, -1, -1], [ 0,  0,  0], [ 1,  1,  1]]),
+               'border3':      np.array([[-1,  0,  1], [-1,  0,  1], [-1,  0,  1]]),
+               'border4':      np.array([[-1, -1,  0], [-1,  0,  1], [ 0,  1,  1]]),
+               'emboss1':      np.array([[0,  0,  0], [ 0,  1,  0], [ 0,  0, -1]]),
+               'emboss2':      np.array([[0,  0, -1], [ 0,  1,  0], [ 0,  0,  0]]),
+               'emboss3':      np.array([[0,  0,  2], [ 0, -1,  0], [-1,  0,  0]]),
                }
 
     kernels_float = {'mean3': np.ones([3] * 2, dtype='float64') / 3 ** 2,
@@ -484,3 +491,10 @@ class Routine(object):
 
     def threshold_mean_y(self):
         self.img_mtx.to_yiq().threshold_mean_y().to_rgb().get_image().save(self.name+'ThresholdMeanY'+self.ext)
+
+    def border(self, type=1):
+        self.img_mtx.apply_kernel(Filter.kernels['border{0}'.format(type)]).get_image().save(self.name+'Border{0}'.format(type)+self.ext)
+
+    def emboss(self, type=1):
+        self.img_mtx.apply_kernel(Filter.kernels['emboss{0}'.format(type)]).get_image().save(self.name+'Emboss{0}'.format(type)+self.ext)
+    
