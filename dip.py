@@ -100,7 +100,7 @@ class ImageMatrix(np.ndarray):
         minimum = 255. * np.array([0.0, -0.596, -0.523])
         maximum = 255. * np.array([1.0, 0.596, 0.523])
         
-        copy = np.copy(image_array)
+        copy = np.float64(image_array)
         
         y = copy[:, :, 0]
         y[y < minimum[0]] = minimum[0]
@@ -114,7 +114,7 @@ class ImageMatrix(np.ndarray):
         q[q < minimum[2]] = minimum[2]
         q[q > maximum[2]] = maximum[2]
 
-        return np.float64(copy.view(ImageMatrix))
+        return copy.view(ImageMatrix)
 
     # PROCESSING METHODS
     def channel(self, channel_array):
@@ -124,7 +124,7 @@ class ImageMatrix(np.ndarray):
         :return: Formatted uint8 ImageMatrix
         """
         channel_array = np.array(channel_array, dtype='uint8')
-        product = np.copy(self)
+        product = np.ones_like(self)
         product[:, :, :3] = self[:, :, :3] * channel_array[:3]
         return ImageMatrix.format_image_array(product)
 
@@ -134,7 +134,7 @@ class ImageMatrix(np.ndarray):
         :param operand: int value
         :return: Formatted uint8 ImageMatrix
         """
-        copy = np.int16(np.copy(self))
+        copy = np.int16(self)
         copy[:, :, :3] += operand
         return ImageMatrix.format_image_array(copy)
 
@@ -144,7 +144,7 @@ class ImageMatrix(np.ndarray):
         :param operand: float value
         :return: Formatted float64 ImageMatrix (YIQ mode)
         """
-        copy = np.float64(np.copy(self))
+        copy = np.float64(self)
         copy[:, :, 0] += operand
         return ImageMatrix.format_image_array_yiq(copy)
 
@@ -154,7 +154,7 @@ class ImageMatrix(np.ndarray):
         :param operand: float value
         :return: Formatted uint8 ImageMatrix
         """
-        copy = np.float64(np.copy(self))
+        copy = np.float64(self)
         copy[:, :, :3] *= operand
         return ImageMatrix.format_image_array(copy)
 
@@ -164,7 +164,7 @@ class ImageMatrix(np.ndarray):
         :param operand: float value
         :return: Formatted uint8 ImageMatrix
         """
-        copy = np.float64(np.copy(self))
+        copy = np.float64(self)
         copy[:, :, 0] *= operand
         return ImageMatrix.format_image_array_yiq(copy)
 
@@ -174,8 +174,8 @@ class ImageMatrix(np.ndarray):
         :return: Formatted uint8 ImageMatrix
         """
         # keeps alpha channel's values
-        copy = np.copy(self)
-        copy[:, :, :3] = 255 - copy[:, :, :3]
+        copy = np.ones_like(self)
+        copy[:, :, :3] = 255 - self[:, :, :3]
         return ImageMatrix.format_image_array(copy)
 
     def negative_y(self):
@@ -194,8 +194,8 @@ class ImageMatrix(np.ndarray):
         :return: Formatted uint8/float64 ImageMatrix
         """
         # adding margins
-        hks = (kernel.shape[0]-1)/2  # half_kernel_size
-        image_padded = np.zeros([self.shape[0] + 2 * hks, self.shape[1] + 2 * hks, self.shape[2]])
+        hks = int((kernel.shape[0]-1)/2)  # half_kernel_size
+        image_padded = np.ones([self.shape[0] + 2 * hks, self.shape[1] + 2 * hks, self.shape[2]]) * 255
         image_padded[hks:-hks, hks:-hks] = np.copy(self)
 
         # extension padding on edges
@@ -213,7 +213,7 @@ class ImageMatrix(np.ndarray):
         :param kernel: np.ndarray kernel
         :return: uint8/float64 ImageMatrix
         """
-        copy = np.copy(self)
+        copy = np.ones_like(self) * 255
         # kernel application
         for x in range(copy.shape[1]):
             for y in range(copy.shape[0]):
@@ -243,8 +243,8 @@ class ImageMatrix(np.ndarray):
         :param kernel: float np.ndarray kernel
         :return: float64 ImageMatrix
         """
-        kernel = np.flipud(np.fliplr(np.copy(kernel)))
-        output = np.float64(np.copy(self)).view(self.__class__)
+        kernel = np.flipud(np.fliplr(kernel))
+        output = np.float64(self).view(self.__class__)
 
         image_padded = np.float64(self.extension_padded(kernel))
 
@@ -257,7 +257,7 @@ class ImageMatrix(np.ndarray):
         :return: uint8 ImageMatrix
         """
         hks = (kernel.shape[0] - 1) / 2
-        output = np.int16(np.copy(self))
+        output = np.int16(self)
 
         image_padded = np.int16(self.extension_padded(kernel))
 
@@ -279,7 +279,7 @@ class ImageMatrix(np.ndarray):
         :return: float64 ImageMatrix
         """
         t = np.array([[0.299, 0.587, 0.114], [0.596, -0.274, -0.322], [0.211, -0.523, 0.312]])
-        fl_copy = np.float64(np.copy(self[:, :, :3]))
+        fl_copy = np.float64(self[:, :, :3])
         result = fl_copy.dot(t.T) / 255
         return result.view(self.__class__)
 
@@ -289,7 +289,7 @@ class ImageMatrix(np.ndarray):
         :return: uint8 ImageMatrix
         """
         t = np.array([[1.000, 0.956, 0.621], [1.000, -0.272, -0.647], [1.000, -1.106, 1.703]])
-        fl_copy = np.float64(np.copy(self[:, :, :3]))
+        fl_copy = np.float64(self[:, :, :3])
         result = fl_copy.dot(t.T) * 255.0
         return ImageMatrix.format_image_array(result)
 
@@ -299,8 +299,8 @@ class ImageMatrix(np.ndarray):
         :return: uint32 ImageMatrix
         """
         print('Calculating Gx component...')
-        kernel = np.flipud(np.fliplr(np.copy(Filter.kernels['gx'])))
-        gx = np.int32(np.copy(self)).view(self.__class__)
+        kernel = np.flipud(np.fliplr(Filter.kernels['gx']))
+        gx = np.int32(self).view(self.__class__)
         image_padded = np.int32(self.extension_padded(kernel))
         return gx.run_kernel_loop(image_padded, kernel)
 
@@ -310,8 +310,8 @@ class ImageMatrix(np.ndarray):
         :return: uint32 ImageMatrix
         """
         print('Calculating Gy component...')
-        kernel = np.flipud(np.fliplr(np.copy(Filter.kernels['gy'])))
-        gy = np.int32(np.copy(self)).view(self.__class__)
+        kernel = np.flipud(np.fliplr(Filter.kernels['gy']))
+        gy = np.int32(self).view(self.__class__)
         image_padded = np.int32(self.extension_padded(kernel))
         return gy.run_kernel_loop(image_padded, kernel)
 
@@ -338,11 +338,11 @@ class ImageMatrix(np.ndarray):
         Returns a ImageMatrix monocromatic channel of self.\n
         :return: uint8 ImageMatrix
         """
-        copy = np.copy(self)
+        copy = np.ones_like(self)
         factor = np.array([299.0/1000, 587.0/1000, 114.0/1000])
         for x in range(self.shape[1]):
             for y in range(self.shape[0]):
-                l = (copy[y, x] * factor).sum()
+                l = (self[y, x] * factor).sum()
                 copy[y, x, :3] = np.array([l, l, l])
         return ImageMatrix.format_image_array(copy)
 
@@ -361,7 +361,7 @@ class ImageMatrix(np.ndarray):
             return True
         return False
 
-    def threshold_y(self, m=0.5):
+    def threshold_y(self, minimum=0.2, maximum=0.7):
         """
         Applies threshold values over Y (luma) component's values.\n
         :param m: float value for Y component threshold.
@@ -373,8 +373,8 @@ class ImageMatrix(np.ndarray):
             return copy
 
         y = copy[:, :, 0]
-        y[y > m] = 1.0
-        y[y <= m] = 0.0
+        y[y > minimum] = 1.0
+        y[y <= maximum] = 0.0
 
         return copy
 
