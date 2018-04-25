@@ -7,6 +7,8 @@ class Filter(object):
 
     kernels = {'identity':     np.array([[0,  0,  0], [ 0,  1,  0], [ 0,  0,  0]]),
                'sharpen':      np.array([[0, -1,  0], [-1,  5, -1], [ 0, -1,  0]]),
+               'sharpeness_a1':np.array([[0, -1, 0], [-1, 4, -1], [0, -1, 0]]),
+               'sharpeness_a2':np.array([[-1,  -1,  -1], [ -1, 8,  -1], [ -1,  -1,  -1]]),
                'other_kernel': np.array([[0,  0,  0], [ 0,  1,  0], [ 0,  0, -1]]),
                'blur':         np.array([[1,  1,  1], [ 1,  1,  1], [ 1,  1,  1]]),
                'gx':           np.array([[1,  0, -1], [ 2,  0, -2], [ 1,  0, -1]]),
@@ -497,4 +499,16 @@ class Routine(object):
 
     def emboss(self, type=1):
         self.img_mtx.apply_kernel(Filter.kernels['emboss{0}'.format(type)]).get_image().save(self.name+'Emboss{0}'.format(type)+self.ext)
-    
+
+    def sharpness_a1(self,c, d, type=1):
+        kernel = Filter.kernels['sharpeness_a1']
+        kernel *= c
+        shape = kernel.shape
+        kernel[shape[0]//2][shape[1]//2] = kernel[shape[0]//2][shape[1]//2] + d
+        self.img_mtx.apply_kernel(kernel).get_image().save(self.name+'Sharpen{0}c{1}d{2}'.format(type, c, d)+self.ext)
+    def sharpness_a2(self,c, d, type=2):
+        kernel = Filter.kernels['sharpeness_a2']
+        kernel *= c
+        shape = kernel.shape
+        kernel[shape[0]//2][shape[1]//2] = kernel[shape[0]//2][shape[1]//2] + d
+        self.img_mtx.apply_kernel(kernel).get_image().save(self.name+'Sharpen{0}c{1}d{2}'.format(type, c, d)+self.ext)
