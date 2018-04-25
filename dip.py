@@ -435,6 +435,74 @@ class ImageMatrix(np.ndarray):
 
         return ImageMatrix.format_image_array(copy)
 
+    def cdf(self, i, histogram):
+        """
+        Returns sum of cumulative histogram distribution up to pixel intensity level i.
+        :return: Integer
+        """
+        result = 0
+        for j in range(i):
+            result += histogram[j]
+
+        return result
+
+    def histogram(self, channel=0):
+        """
+        Returns histogram for a single color channel.
+        :return: Integer array
+        """
+        histogram = [0] * 256
+
+        for x in range(self.shape[1]):
+            for y in range(self.shape[0]):
+                histogram[self[y][x][channel]] += 1
+
+        return histogram
+
+    def histogram_equalization(self, channel=0):
+        """
+        Performs histogram equalization.\n
+        :return: Formatted uint8 ImageMatrix
+        """
+        histogram = self.histogram(channel)
+
+        # Make array sequential
+        w = self.shape[0]
+        h = self.shape[1]
+        copy = self.reshape((w * h), 3)
+
+        # First, find lowest intensity value in image
+        min_cdf = 9999
+        for i in range(w * h):
+            min_cdf = min(min_cdf, copy[i][channel])
+
+        # Then, find cumulative distribution for that value
+        min_cdf = copy.cdf(min_cdf, histogram)
+
+        # Create lookup table with new gray values
+        # For equation explanation refer to:
+        # https://en.wikipedia.org/wiki/Histogram_equalization
+        LUT = [0] * 256
+        for i in range (0, 256):
+            LUT[i] = round( ((copy.cdf(i, histogram) - min_cdf) / ((w * h) - min_cdf)) * (255) )
+
+        # Use LUT to apply the new gray values to each pixel
+        for v in range(w * h):
+            for c in range(0, 3):
+                copy[v][c] = LUT[copy[v][c]]
+
+        # Restructure image into (x, y, channel) and return
+        copy = copy.reshape((w, h, 3))
+        return ImageMatrix.format_image_array(copy)
+
+    def histogram_equalization_rgb(self):
+        copy = np.copy(self).view(__class__)
+
+        for c in range(0, 3):
+            copy = copy.histogram_equalization(c)
+
+        return ImageMatrix.format_image_array(copy)
+
 class Routine(object):
     """Facade for common processes with creation of files.
 
@@ -542,3 +610,9 @@ class Routine(object):
 
     def expansion(self):
         self.img_mtx.histogram_expansion().get_image().save(self.name+'Expanded'+self.ext)
+
+    def equalization(self, channel=0):
+        self.img_mtx.histogram_equalization(channel).get_image().save(self.name+'Equalized'+self.ext)
+
+    def equalization_rgb(self):
+        self.img_mtx.histogram_equalization_rgb().get_image().save(self.name+'EqualizedRGB'+self.ext)
