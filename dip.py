@@ -469,7 +469,7 @@ class ImageMatrix(np.ndarray):
         # Make array sequential
         w = self.shape[0]
         h = self.shape[1]
-        copy = self.reshape((w * h), 3)
+        copy = self.reshape((w * h), self.shape[2])
 
         # First, find lowest intensity value in image
         min_cdf = 9999
@@ -492,7 +492,7 @@ class ImageMatrix(np.ndarray):
                 copy[v][c] = LUT[copy[v][c]]
 
         # Restructure image into (x, y, channel) and return
-        copy = copy.reshape((w, h, 3))
+        copy = copy.reshape((w, h, self.shape[2]))
         return ImageMatrix.format_image_array(copy)
 
     def histogram_equalization_rgb(self):
