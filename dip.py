@@ -5,28 +5,28 @@ from os.path import splitext
 
 class Filter(object):
 
-    kernels = {'identity':     np.array([[0,  0,  0], [ 0,  1,  0], [ 0,  0,  0]]),
-               'sharpen':      np.array([[0, -1,  0], [-1,  5, -1], [ 0, -1,  0]]),
-               'sharpeness_a1':np.array([[0, -1, 0], [-1, 4, -1], [0, -1, 0]]),
-               'sharpeness_a2':np.array([[-1,  -1,  -1], [ -1, 8,  -1], [ -1,  -1,  -1]]),
-               'other_kernel': np.array([[0,  0,  0], [ 0,  1,  0], [ 0,  0, -1]]),
-               'blur':         np.array([[1,  1,  1], [ 1,  1,  1], [ 1,  1,  1]]),
-               'gx':           np.array([[1,  0, -1], [ 2,  0, -2], [ 1,  0, -1]]),
-               'gy':           np.array([[1,  2,  1], [ 0,  0,  0], [-1, -2, -1]]),
-               'log4n':        np.array([[0,  1,  0], [ 1, -4,  1], [ 0,  1,  0]]),
-               'log8n':        np.array([[1,  1,  1], [ 1, -8,  1], [ 1,  1,  1]]),
-               'border1':      np.array([[-0.125, -0.125, -0.125], [ -0.125,  1, -0.125], [-0.125, -0.125, -0.125]]),
-               'border2':      np.array([[-1, -1, -1], [ 0,  0,  0], [ 1,  1,  1]]),
-               'border3':      np.array([[-1,  0,  1], [-1,  0,  1], [-1,  0,  1]]),
-               'border4':      np.array([[-1, -1,  0], [-1,  0,  1], [ 0,  1,  1]]),
-               'emboss1':      np.array([[0,  0,  0], [ 0,  1,  0], [ 0,  0, -1]]),
-               'emboss2':      np.array([[0,  0, -1], [ 0,  1,  0], [ 0,  0,  0]]),
-               'emboss3':      np.array([[0,  0,  2], [ 0, -1,  0], [-1,  0,  0]]),
+    kernels = {'identity':     np.array([[ 0,  0,  0], [ 0,  1,  0], [ 0,  0,  0]]),
+               'sharpen':      np.array([[ 0, -1,  0], [-1,  5, -1], [ 0, -1,  0]]),
+               'sharpness1':   np.array([[ 0, -1,  0], [-1,  4, -1], [ 0, -1,  0]]),
+               'sharpness2':   np.array([[-1, -1, -1], [-1,  8, -1], [-1, -1, -1]]),
+               'other_kernel': np.array([[ 0,  0,  0], [ 0,  1,  0], [ 0,  0, -1]]),
+               'blur':         np.array([[ 1,  1,  1], [ 1,  1,  1], [ 1,  1,  1]]),
+               'gx':           np.array([[ 1,  0, -1], [ 2,  0, -2], [ 1,  0, -1]]),
+               'gy':           np.array([[ 1,  2,  1], [ 0,  0,  0], [-1, -2, -1]]),
+               'log4n':        np.array([[ 0,  1,  0], [ 1, -4,  1], [ 0,  1,  0]]),
+               'log8n':        np.array([[ 1,  1,  1], [ 1, -8,  1], [ 1,  1,  1]]),
+               'border1':      np.array([[-1, -1, -1], [ 0,  0,  0], [ 1,  1,  1]]),
+               'border2':      np.array([[-1,  0,  1], [-1,  0,  1], [-1,  0,  1]]),
+               'border3':      np.array([[-1, -1,  0], [-1,  0,  1], [ 0,  1,  1]]),
+               'emboss1':      np.array([[ 0,  0,  0], [ 0,  1,  0], [ 0,  0, -1]]),
+               'emboss2':      np.array([[ 0,  0, -1], [ 0,  1,  0], [ 0,  0,  0]]),
+               'emboss3':      np.array([[ 0,  0,  2], [ 0, -1,  0], [-1,  0,  0]]),
                }
 
     kernels_float = {'mean3': np.ones([3] * 2, dtype='float64') / 3 ** 2,
                      'mean5': np.ones([5] * 2, dtype='float64') / 5 ** 2,
                      'mean7': np.ones([7] * 2, dtype='float64') / 7 ** 2,
+                     'border': np.array([[-0.125, -0.125, -0.125], [-0.125, 1, -0.125], [-0.125, -0.125, -0.125]])
                      }
 
     channels = {'k': [0, 0, 0], 'b': [0, 0, 1],
@@ -108,13 +108,13 @@ class ImageMatrix(np.ndarray):
         """
         minimum = 255. * np.array([0.0, -0.596, -0.523])
         maximum = 255. * np.array([1.0, 0.596, 0.523])
-        
+
         copy = np.float64(image_array)
-        
+
         y = copy[:, :, 0]
         y[y < minimum[0]] = minimum[0]
         y[y > maximum[0]] = maximum[0]
-        
+
         i = copy[:, :, 1]
         i[i < minimum[1]] = minimum[1]
         i[i > maximum[1]] = maximum[1]
@@ -203,15 +203,15 @@ class ImageMatrix(np.ndarray):
         :return: Formatted uint8/float64 ImageMatrix
         """
         # adding margins
-        hks = int((kernel.shape[0]-1)/2)  # half_kernel_size
+        hks = int((kernel.shape[0] - 1) / 2)  # half_kernel_size
         image_padded = np.ones([self.shape[0] + 2 * hks, self.shape[1] + 2 * hks, self.shape[2]]) * 255
         image_padded[hks:-hks, hks:-hks] = np.copy(self)
 
         # extension padding on edges
-        image_padded[0:hks, :] = image_padded[hks:hks+1, :]
-        image_padded[:, 0:hks] = image_padded[:, hks:hks+1]
-        image_padded[-1: -(hks+1):-1, :] = image_padded[-(hks+1):-(hks+2):-1, :]
-        image_padded[:, -1: -(hks+1):-1] = image_padded[:, -(hks+1):-(hks+2):-1]
+        image_padded[0:hks, :] = image_padded[hks:hks + 1, :]
+        image_padded[:, 0:hks] = image_padded[:, hks:hks + 1]
+        image_padded[-1: -(hks + 1):-1, :] = image_padded[-(hks + 1):-(hks + 2):-1, :]
+        image_padded[:, -1: -(hks + 1):-1] = image_padded[:, -(hks + 1):-(hks + 2):-1]
 
         return image_padded.view(self.__class__)
 
@@ -227,37 +227,45 @@ class ImageMatrix(np.ndarray):
         for x in range(copy.shape[1]):
             for y in range(copy.shape[0]):
                 for c in range(3):
-                    copy[y, x, c] = (image_padded[y:y+kernel.shape[0], x:x+kernel.shape[0], c] * kernel).sum()
+                    copy[y, x, c] = (image_padded[y:y + kernel.shape[0], x:x + kernel.shape[0], c] * kernel).sum()
 
         return copy.view(self.__class__)
 
-    def apply_kernel(self, kernel):
+    def apply_kernel(self, kernel, offU=0, offD=0, offL=0, offR=0):
         """
         Routine for convolution with int kernels: flips the kernel, pads (extension) self ImageMatrix, applies kernel's
         convolution and formats the output.
         :param kernel: int np.ndarray kernel
         :return: uint8 ImageMatrix
         """
-        kernel = np.flipud(np.fliplr(np.copy(kernel)))
-        output = np.int16(np.copy(self)).view(self.__class__)
+        copy = np.copy(self).view(ImageMatrix)
+        offset = self[offU:self.shape[0] - offD, offL:self.shape[1] - offR]
+        kernel = np.flipud(np.fliplr(kernel))
 
-        image_padded = np.int16(self.extension_padded(kernel))
+        output = np.int16(offset).view(self.__class__)
+        image_padded = np.int16(offset.extension_padded(kernel))
 
-        return ImageMatrix.format_image_array(output.run_kernel_loop(image_padded, kernel))
+        output = ImageMatrix.format_image_array(output.run_kernel_loop(image_padded, kernel))
+        copy[offU:self.shape[0] - offD, offL:self.shape[1] - offR] = output
+        return copy
 
-    def apply_kernel_float(self, kernel):
+    def apply_kernel_float(self, kernel, offU=0, offD=0, offL=0, offR=0):
         """
         Routine for convolution with float kernels: flips the kernel, pads (extension) self ImageMatrix, applies
         kernel's convolution and formats the output.\n
         :param kernel: float np.ndarray kernel
         :return: float64 ImageMatrix
         """
+        copy = np.copy(self).view(ImageMatrix)
+        offset = self[offU:self.shape[0] - offD, offL:self.shape[1] - offR]
         kernel = np.flipud(np.fliplr(kernel))
-        output = np.float64(self).view(self.__class__)
 
-        image_padded = np.float64(self.extension_padded(kernel))
+        output = np.float64(offset).view(self.__class__)
+        image_padded = np.float64(offset.extension_padded(kernel))
 
-        return ImageMatrix.format_image_array(output.run_kernel_loop(image_padded, kernel))
+        output = ImageMatrix.format_image_array(output.run_kernel_loop(image_padded, kernel))
+        copy[offU:self.shape[0] - offD, offL:self.shape[1] - offR] = output
+        return copy
 
     def median(self, kernel):
         """
@@ -274,9 +282,9 @@ class ImageMatrix(np.ndarray):
         for x in range(self.shape[1]):
             for y in range(self.shape[0]):
                 for c in range(3):
-                    copy1d = image_padded[y:y+kernel.shape[0], x:x+kernel.shape[0], c].flatten()
+                    copy1d = image_padded[y:y + kernel.shape[0], x:x + kernel.shape[0], c].flatten()
                     copy1d.sort()
-                    output[y, x, c] = copy1d[hks+1]
+                    output[y, x, c] = copy1d[hks + 1]
                     # does not work! kernel must not be applied over a backup array
                     # image_padded[y+hks, x+hks, c] = copy1d[hks+1]
 
@@ -348,7 +356,7 @@ class ImageMatrix(np.ndarray):
         :return: uint8 ImageMatrix
         """
         copy = np.ones_like(self)
-        factor = np.array([299.0/1000, 587.0/1000, 114.0/1000])
+        factor = np.array([299.0 / 1000, 587.0 / 1000, 114.0 / 1000])
         for x in range(self.shape[1]):
             for y in range(self.shape[0]):
                 l = (self[y, x] * factor).sum()
@@ -362,7 +370,7 @@ class ImageMatrix(np.ndarray):
         :param data: np.dtype value
         :return: Boolean True if data is any kind of numpy float.
         """
-        if   isinstance(data, np.float16):
+        if isinstance(data, np.float16):
             return True
         elif isinstance(data, np.float32):
             return True
@@ -431,84 +439,81 @@ class Routine(object):
 
     def channel(self):
         for key, val in Filter.channels.iteritems():
-            self.img_mtx.channel(val).get_image().save(self.name+'Channel'+key.upper()+self.ext)
+            self.img_mtx.channel(val).get_image().save(self.name + 'Channel' + key.upper() + self.ext)
 
     def add_shine(self):
         for i in np.arange(40, 161, 40):
-            self.img_mtx.add_shine(i).get_image().save(self.name+'AddShine'+str(i)+self.ext)
+            self.img_mtx.add_shine(i).get_image().save(self.name + 'AddShine' + str(i) + self.ext)
 
     def add_shine_y(self):
         for f in np.arange(0.2, 1., 0.3):
-            self.img_mtx.to_yiq().add_shine_y(f).to_rgb().get_image().save(self.name+'AddShineY'+"{0:.1f}".format(f).replace('.', '-')+self.ext)
+            self.img_mtx.to_yiq().add_shine_y(f).to_rgb().get_image().save(self.name + 'AddShineY' + "{0:.1f}".format(f).replace('.', '-') + self.ext)
 
     def mult_shine(self):
         for f in np.arange(1.2, 2.8, 0.5):
-            self.img_mtx.mult_shine(f).get_image().save(self.name+'MultShine'+str(f).replace('.', '-')+self.ext)
+            self.img_mtx.mult_shine(f).get_image().save(self.name + 'MultShine' + str(f).replace('.', '-') + self.ext)
 
     def mult_shine_y(self):
         for f in np.arange(1.5, 3.2, 0.8):
-            self.img_mtx.to_yiq().mult_shine_y(f).to_rgb().get_image().save(self.name+'MultShineY'+"{0:.1f}".format(f).replace('.', '-')+self.ext)
+            self.img_mtx.to_yiq().mult_shine_y(f).to_rgb().get_image().save(self.name + 'MultShineY' + "{0:.1f}".format(f).replace('.', '-') + self.ext)
 
     def negative(self):
-        self.img_mtx.negative().get_image().save(self.name+'Negative'+self.ext)
-        
+        self.img_mtx.negative().get_image().save(self.name + 'Negative' + self.ext)
+
     def negative_y(self):
         self.img_mtx.negative_y().get_image().save(self.name + "Negative_y" + self.ext)
-        
+
     def sharpen(self):
-        self.img_mtx.apply_kernel(Filter.kernels['sharpen']).get_image().save(self.name+'Sharpen'+self.ext)
-    
+        self.img_mtx.apply_kernel(Filter.kernels['sharpen']).get_image().save(self.name + 'Sharpen' + self.ext)
+
     def other_kernel(self):
-        self.img_mtx.apply_kernel(Filter.kernels['other_kernel']).get_image().save(self.name+'OtherKernel'+self.ext)
-        
+        self.img_mtx.apply_kernel(Filter.kernels['other_kernel']).get_image().save(self.name + 'OtherKernel' + self.ext)
+
     def median(self):
-        self.img_mtx.median(Filter.kernels['blur']).get_image().save(self.name+'Median'+self.ext)
+        self.img_mtx.median(Filter.kernels['blur']).get_image().save(self.name + 'Median' + self.ext)
 
     def sharpening_through_mean(self):
         mean = self.img_mtx.apply_kernel_float(Filter.kernels_float['mean'])
-        mean.get_image().save(self.name+'Mean'+self.ext)
-        
+        mean.get_image().save(self.name + 'Mean' + self.ext)
+
         img_mtx_fl64 = np.float64(self.img_mtx[:, :, :3])
         variance_fl64 = img_mtx_fl64 - mean[:, :, :3]
-        variance_fl64.get_image().save(self.name+'MeanVariance'+self.ext)
+        variance_fl64.get_image().save(self.name + 'MeanVariance' + self.ext)
 
         sharpen_mean_fl64 = img_mtx_fl64 + variance_fl64
-        ImageMatrix.format_image_array(sharpen_mean_fl64).get_image().save(self.name+'MeanSharpen'+self.ext)
+        ImageMatrix.format_image_array(sharpen_mean_fl64).get_image().save(self.name + 'MeanSharpen' + self.ext)
 
     def laplacian(self):
-        self.img_mtx.apply_kernel(Filter.kernels['log4n']).get_image().save(self.name+'LoG4N'+self.ext)
-        self.img_mtx.apply_kernel(Filter.kernels['log4n']*-1).get_image().save(self.name+'LoG4P'+self.ext)
-        self.img_mtx.apply_kernel(Filter.kernels['log8n']).get_image().save(self.name+'LoG8N'+self.ext)
-        self.img_mtx.apply_kernel(Filter.kernels['log8n']*-1).get_image().save(self.name+'LoG8P'+self.ext)
-                
+        self.img_mtx.apply_kernel(Filter.kernels['log4n']).get_image().save(self.name + 'LoG4N' + self.ext)
+        self.img_mtx.apply_kernel(Filter.kernels['log4n'] * -1).get_image().save(self.name + 'LoG4P' + self.ext)
+        self.img_mtx.apply_kernel(Filter.kernels['log8n']).get_image().save(self.name + 'LoG8N' + self.ext)
+        self.img_mtx.apply_kernel(Filter.kernels['log8n'] * -1).get_image().save(self.name + 'LoG8P' + self.ext)
+
     def sobel(self):
         gx = self.img_mtx.gx_component()
-        gx.get_image().save(self.name+'SobelGx'+self.ext)
+        gx.get_image().save(self.name + 'SobelGx' + self.ext)
         gy = self.img_mtx.gy_component()
-        gy.get_image().save(self.name+'SobelGy'+self.ext)
-        self.img_mtx.sobel([gx, gy]).get_image().save(self.name+'Sobel'+self.ext)
+        gy.get_image().save(self.name + 'SobelGy' + self.ext)
+        self.img_mtx.sobel([gx, gy]).get_image().save(self.name + 'Sobel' + self.ext)
 
     def threshold_y(self, minimum=0.2, maximum=0.7):
-        self.img_mtx.to_yiq().threshold_y(minimum, maximum).to_rgb().get_image().save(self.name+'ThresholdY'+self.ext)
+        self.img_mtx.to_yiq().threshold_y(minimum, maximum).to_rgb().get_image().save(self.name + 'ThresholdY' + self.ext)
 
     def threshold_mean_y(self):
-        self.img_mtx.to_yiq().threshold_mean_y().to_rgb().get_image().save(self.name+'ThresholdMeanY'+self.ext)
+        self.img_mtx.to_yiq().threshold_mean_y().to_rgb().get_image().save(self.name + 'ThresholdMeanY' + self.ext)
 
-    def border(self, type=1):
-        self.img_mtx.apply_kernel(Filter.kernels['border{0}'.format(type)]).get_image().save(self.name+'Border{0}'.format(type)+self.ext)
+    def border(self, kernel_type=1):
+        self.img_mtx.apply_kernel(Filter.kernels['border{0}'.format(kernel_type)]).get_image().save(self.name + 'Border{0}'.format(kernel_type) + self.ext)
 
-    def emboss(self, type=1):
-        self.img_mtx.apply_kernel(Filter.kernels['emboss{0}'.format(type)]).get_image().save(self.name+'Emboss{0}'.format(type)+self.ext)
+    def border_float(self):
+        self.img_mtx.apply_kernel_float(Filter.kernels_float['border']).get_image().save(self.name + 'Border_float' + self.ext)
 
-    def sharpness_a1(self,c, d, type=1):
-        kernel = Filter.kernels['sharpeness_a1']
+    def emboss(self, kernel_type=1):
+        self.img_mtx.apply_kernel(Filter.kernels['emboss{0}'.format(kernel_type)]).get_image().save(self.name + 'Emboss{0}'.format(kernel_type) + self.ext)
+
+    def sharpness(self, c=0, d=1, kernel_type=1):
+        kernel = Filter.kernels['sharpness' + str(kernel_type)]
         kernel *= c
-        shape = kernel.shape
-        kernel[shape[0]//2][shape[1]//2] = kernel[shape[0]//2][shape[1]//2] + d
-        self.img_mtx.apply_kernel(kernel).get_image().save(self.name+'Sharpen{0}c{1}d{2}'.format(type, c, d)+self.ext)
-    def sharpness_a2(self,c, d, type=2):
-        kernel = Filter.kernels['sharpeness_a2']
-        kernel *= c
-        shape = kernel.shape
-        kernel[shape[0]//2][shape[1]//2] = kernel[shape[0]//2][shape[1]//2] + d
-        self.img_mtx.apply_kernel(kernel).get_image().save(self.name+'Sharpen{0}c{1}d{2}'.format(type, c, d)+self.ext)
+        central = kernel.shape[0] // 2
+        kernel[central, central] += d
+        self.img_mtx.apply_kernel(kernel).get_image().save(self.name + 'Sharpen{0}c{1}d{2}'.format(kernel_type, c, d) + self.ext)
