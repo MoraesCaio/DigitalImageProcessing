@@ -592,21 +592,24 @@ class Routine(object):
     def threshold_mean_y(self):
         self.img_mtx.to_yiq().threshold_mean_y().to_rgb().get_image().save(self.name + 'ThresholdMeanY' + self.ext)
 
-    def border(self, kernel_type=1):
-        self.img_mtx.apply_kernel(Filter.kernels['border{0}'.format(kernel_type)]).get_image().save(self.name + 'Border{0}'.format(kernel_type) + self.ext)
+    def border(self):
+        for kernel_type in range(1, 4):
+            self.img_mtx.apply_kernel(Filter.kernels['border{0}'.format(kernel_type)]).get_image().save(self.name + 'Border{0}'.format(kernel_type) + self.ext)
 
     def border_float(self):
         self.img_mtx.apply_kernel_float(Filter.kernels_float['border']).get_image().save(self.name + 'Border_float' + self.ext)
 
-    def emboss(self, kernel_type=1):
-        self.img_mtx.apply_kernel(Filter.kernels['emboss{0}'.format(kernel_type)]).get_image().save(self.name + 'Emboss{0}'.format(kernel_type) + self.ext)
+    def emboss(self):
+        for kernel_type in range(1, 4):
+            self.img_mtx.apply_kernel(Filter.kernels['emboss{0}'.format(kernel_type)]).get_image().save(self.name + 'Emboss{0}'.format(kernel_type) + self.ext)
 
-    def sharpness(self, c=0, d=1, kernel_type=1):
-        kernel = Filter.kernels['sharpness' + str(kernel_type)]
-        kernel *= c
-        central = kernel.shape[0] // 2
-        kernel[central, central] += d
-        self.img_mtx.apply_kernel(kernel).get_image().save(self.name + 'Sharpen{0}c{1}d{2}'.format(kernel_type, c, d) + self.ext)
+    def sharpness(self, c=0, d=1):
+        for kernel_type in range(1, 3):
+            kernel = Filter.kernels['sharpness' + str(kernel_type)]
+            kernel *= c
+            central = kernel.shape[0] // 2
+            kernel[central, central] += d
+            self.img_mtx.apply_kernel(kernel).get_image().save(self.name + 'Sharpen{0}c{1}d{2}'.format(kernel_type, c, d) + self.ext)
 
     def expansion(self):
         self.img_mtx.histogram_expansion().get_image().save(self.name+'Expanded'+self.ext)
