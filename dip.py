@@ -424,13 +424,13 @@ class ImageMatrix(np.ndarray):
         for x in range(self.shape[1]):
             for y in range(self.shape[0]):
                 # Find maximum and minimum values in image
-                for i in range(0, 2):
+                for i in range(0, 3):
                     n_max[i] = max(n_max[i], copy[y][x][i])
                     n_min[i] = min(n_min[i], copy[y][x][i])
 
         for x in range(self.shape[1]):
             for y in range(self.shape[0]):
-                for i in range(0, 2):
+                for i in range(0, 3):
                     copy[y][x][i] = round(((copy[y][x][i] - n_min[i]) / (n_max[i] - n_min[i])) * (255))
 
         return ImageMatrix.format_image_array(copy)
