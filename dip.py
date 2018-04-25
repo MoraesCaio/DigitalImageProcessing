@@ -64,10 +64,10 @@ class ImageMatrix(np.ndarray):
         :return: ImageMatrix (subclass of numpy.ndarray) object of the RGB or RGBA pixels.
         """
         image = Image.open(filename)
-        if image.format == 'JPEG':
+        if image.format in ['JPEG', 'BMP', 'PCX', 'PPM']:
             if image.mode != 'RGB':
                 image = image.convert('RGB')
-        elif image.format == 'PNG':
+        elif image.format in ['PNG', 'JPEG2000']:
             if image.mode != 'RGBA':
                 image = image.convert('RGBA')
         return np.array(image).view(ImageMatrix)
