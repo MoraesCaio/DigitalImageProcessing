@@ -446,16 +446,17 @@ class ImageMatrix(np.ndarray):
 
         return result
 
-    def histogram(self, channel=0):
+    def histogram(self, color_channel=0):
         """
         Returns histogram for a single color channel.
         :return: Integer array
         """
-        histogram = [0] * 256
 
-        for x in range(self.shape[1]):
-            for y in range(self.shape[0]):
-                histogram[self[y][x][channel]] += 1
+        unique, counts = np.unique(self[:, :, color_channel], return_counts=True)
+        histogram = np.zeros((256), dtype='uint64')
+
+        for key, value in zip(unique, counts):
+            histogram[key] = value
 
         return histogram
 
