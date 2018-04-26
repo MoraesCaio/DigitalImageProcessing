@@ -468,14 +468,11 @@ class ImageMatrix(np.ndarray):
         histogram = self.histogram(channel)
 
         # Make array sequential
-        w = self.shape[0]
-        h = self.shape[1]
-        copy = self.reshape((w * h), self.shape[2])
+        pixels_num = self.shape[0] * self.shape[1]
+        copy = self.reshape((pixels_num), self.shape[2])
 
         # First, find lowest intensity value in image
-        min_cdf = 9999
-        for i in range(w * h):
-            min_cdf = min(min_cdf, copy[i][channel])
+        min_cdf = np.amin(copy[:, channel])
 
         # Then, find cumulative distribution for that value
         min_cdf = copy.cdf(min_cdf, histogram)
@@ -483,17 +480,17 @@ class ImageMatrix(np.ndarray):
         # Create lookup table with new gray values
         # For equation explanation refer to:
         # https://en.wikipedia.org/wiki/Histogram_equalization
-        LUT = [0] * 256
+        LUT = np.zeros((256), dtype='uint64')
         for i in range (0, 256):
-            LUT[i] = round( ((copy.cdf(i, histogram) - min_cdf) / ((w * h) - min_cdf)) * (255) )
+            LUT[i] = round( ((copy.cdf(i, histogram) - min_cdf) / ((pixels_num) - min_cdf)) * (255) )
 
         # Use LUT to apply the new gray values to each pixel
-        for v in range(w * h):
+        for v in range(pixels_num):
             for c in range(0, 3):
-                copy[v][c] = LUT[copy[v][c]]
+                copy[v, c] = LUT[copy[v, c]]
 
         # Restructure image into (x, y, channel) and return
-        copy = copy.reshape((w, h, self.shape[2]))
+        copy = copy.reshape(self.shape)
         return ImageMatrix.format_image_array(copy)
 
     def histogram_equalization_rgb(self):
