@@ -1,6 +1,8 @@
 from PIL import Image
 import numpy as np
 from os.path import splitext
+import cv2
+import imutils
 
 
 class Filter(object):
@@ -514,6 +516,99 @@ class ImageMatrix(np.ndarray):
             copy = copy.histogram_equalization(c)
 
         return ImageMatrix.format_image_array(copy)
+
+    def get_mode_value(self):
+        mode_rgb = np.ones(self.shape[2]) * 255
+
+        for channel in range(3):
+            uniques, counts = np.unique(self[:, :, channel], return_counts=True)
+            
+            mode_color = -1
+            maximum_freq = -1
+            
+            for u, c in zip(uniques, counts):
+                if c > maximum_freq:
+                    maximum_freq = c
+                    mode_color = u
+            
+            mode_rgb[channel] = mode_color
+
+        return mode_rgb.astype(int)
+
+
+    def get_median_value(self):
+        median_rgb = np.ones(self.shape[2]) * 255
+
+        for channel in range(3):
+            median_rgb[channel] = np.median(self[:, :, channel])
+
+        return median_rgb.astype(int)
+
+
+    def get_mean_value(self):
+        mean_rgb = np.ones(self.shape[2]) * 255
+
+        for channel in range(3):
+            mean_rgb[channel] = np.mean(self[:, :, channel])
+
+        return mean_rgb.astype(int)
+
+    def rotation_filling(self, angle, filling_mode='median'):
+        PIL_img = Image.fromarray(self)
+
+        if filling_mode == 'mode':
+            fill_color = self.get_mode_value()
+        elif filling_mode == 'mean':
+            fill_color = self.get_mean_value()
+        else:
+            fill_color = self.get_median_value()
+
+        rotated = np.array(PIL_img.rotate(angle, resample=Image.BILINEAR, expand=True))
+        r, g, b = rotated[:, :, 0], rotated[:, :, 1], rotated[:, :, 2]
+        mask = (r == 0) & (g == 0) & (b == 0)
+        rotated[:, :, :][mask] = fill_color
+
+        return rotated.view(ImageMatrix)
+
+    def rotation_crop(self, angle):
+        gray = cv2.cvtColor(self, cv2.COLOR_BGR2GRAY)
+        gray = cv2.GaussianBlur(gray, (3, 3), 0)
+        edged = cv2.Canny(gray, 20, 100)
+
+        # find contours in the edge map
+        cnts = cv2.findContours(edged.copy(), cv2.RETR_EXTERNAL,
+                                cv2.CHAIN_APPROX_SIMPLE)
+        cnts = cnts[0] if imutils.is_cv2() else cnts[1]
+
+        # ensure at least one contour was found
+        if len(cnts) > 0:
+            # grab the largest contour, then draw a mask for the image
+            c = max(cnts, key=cv2.contourArea)
+            mask = np.zeros(gray.shape, dtype="uint8")
+            cv2.drawContours(mask, [c], -1, 255, -1)
+
+            # compute its bounding box of image, then extract the ROI,
+            # and apply the mask
+            (x, y, w, h) = cv2.boundingRect(c)
+            imageROI = np.array(self)[y:y + h, x:x + w]
+            maskROI = mask[y:y + h, x:x + w]
+            imageROI = cv2.bitwise_and(imageROI, imageROI,
+                                       mask=maskROI)
+
+        return np.array(imutils.rotate_bound(imageROI, angle)).view(ImageMatrix)
+
+    def resize(self, height=-1, width=-1, ratio=1.0):
+        resized = Image.fromarray(self)
+        height = self.shape[0] if height < 0 else height
+        width = self.shape[1] if width < 0 else width
+        resized.thumbnail(np.array([height, width]) * ratio, Image.ANTIALIAS)
+        return np.array(resized).view(ImageMatrix)
+
+    def show(self, title='Image', wait=True):
+        cv2.imshow(title, cv2.cvtColor(self, cv2.COLOR_BGR2RGB))
+        if wait:
+            cv2.waitKey()
+
 
 class Routine(object):
     """Facade for common processes with creation of files.
