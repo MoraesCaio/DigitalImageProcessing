@@ -435,16 +435,19 @@ class ImageMatrix(np.ndarray):
 
         return ImageMatrix.format_image_array(copy)
 
-    def cdf(self, i, histogram):
+    def cdf(self, histogram):
         """
-        Returns sum of cumulative histogram distribution up to pixel intensity level i.
+        Returns sum of cumulative histogram distribution up to pixel intensity level i.\n
+        CDF stands for Cumulative Distribution Function
         :return: Integer
         """
-        result = 0
-        for j in range(i):
-            result += histogram[j]
+        cumulative_sum = 0
+        cdf_list = np.zeros(256)
+        for i in range(256):
+            cumulative_sum += histogram[i]
+            cdf_list[i] = cumulative_sum
 
-        return result
+        return cdf_list
 
     def histogram(self, color_channel=0):
         """
@@ -472,22 +475,21 @@ class ImageMatrix(np.ndarray):
         copy = self.reshape((pixels_num), self.shape[2])
 
         # First, find lowest intensity value in image
-        min_cdf = np.amin(copy[:, channel])
+        min_cdf_key = np.amin(copy[:, channel])
 
         # Then, find cumulative distribution for that value
-        min_cdf = copy.cdf(min_cdf, histogram)
+        cdf_list = copy.cdf(histogram)
+        min_cdf_value = cdf_list[min_cdf_key]
 
         # Create lookup table with new gray values
         # For equation explanation refer to:
         # https://en.wikipedia.org/wiki/Histogram_equalization
         LUT = np.zeros((256), dtype='uint64')
-        for i in range (0, 256):
-            LUT[i] = round( ((copy.cdf(i, histogram) - min_cdf) / ((pixels_num) - min_cdf)) * (255) )
+        # for i in range (0, 256):
+        LUT = ((cdf_list - min_cdf_value) / ((pixels_num) - min_cdf_value)) * 255
 
         # Use LUT to apply the new gray values to each pixel
-        for v in range(pixels_num):
-            for c in range(0, 3):
-                copy[v, c] = LUT[copy[v, c]]
+        copy[:] = LUT[copy[:]]
 
         # Restructure image into (x, y, channel) and return
         copy = copy.reshape(self.shape)
