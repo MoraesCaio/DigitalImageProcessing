@@ -1,3 +1,5 @@
+from __future__ import division, absolute_import, print_function, unicode_literals
+import six
 from PIL import Image
 import numpy as np
 from os.path import splitext
@@ -31,17 +33,17 @@ class Filter(object):
                      'border': np.array([[-0.125, -0.125, -0.125], [-0.125, 1, -0.125], [-0.125, -0.125, -0.125]])
                      }
 
-    channels = {'k': [0, 0, 0], 'b': [0, 0, 1],
-                'g': [0, 1, 0], 'c': [0, 1, 1],
-                'r': [1, 0, 0], 'm': [1, 0, 1],
-                'y': [1, 1, 0], 'w': [1, 1, 1]}
+    channels = {'k': np.array([0, 0, 0]), 'b': np.array([0, 0, 1]),
+                'g': np.array([0, 1, 0]), 'c': np.array([0, 1, 1]),
+                'r': np.array([1, 0, 0]), 'm': np.array([1, 0, 1]),
+                'y': np.array([1, 1, 0]), 'w': np.array([1, 1, 1])}
 
 
 class ImageMatrix(np.ndarray):
     """
     Main class of dip, subclass of np.ndarray, contains methods for image processing. Uses PIL.Image and np.ndarrays.
-     All of its methods do NOT alter the calling ImageMatrix object (self), instead a copy with the result processing is
-     returned. This allows chaining methods without losing the original data of the image.
+     All of its methods do NOT alter the calling ImageMatrix object (self), instead a copy with the result processing
+     is returned. This allows chaining methods without losing the original data of the image.
      (e.g.: img_mtx.grey().sobel() will NOT alter img_mtx object!)
 
      For creation of ImageMatrix objects, is recommended to use one of the following methods:
@@ -71,6 +73,9 @@ class ImageMatrix(np.ndarray):
     def from_file(filename, fix_rotation=False):
         """
         Creates an ImageMatrix object corresponding to filename.\n
+        :param fix_rotation: some cameras set wrong exif tags for rotation.\n
+         If fix_rotation is True,tries to fix it. It should not be always True, as some image files\n
+         does not have exif tags.
         :param filename: string name of the file (including its extension).
         :return: ImageMatrix (subclass of numpy.ndarray) object of the RGB or RGBA pixels.
         """
@@ -147,14 +152,14 @@ class ImageMatrix(np.ndarray):
         return copy.view(ImageMatrix)
 
     # PROCESSING METHODS
-    def channel(self, channel_array):
+    def apply_mask(self, channel_array):
         """
         Iterates through ImageMatrix self multiplying each pixel's colors by int np.ndarray channel_array.\n
-        :param channel_array: int np.array with shape (>=3, 1) (only 3 first elements will have effect).
+        :param channel_array: int np.array with shape (>=3) (only 3 first elements will have effect).
         :return: Formatted uint8 ImageMatrix
         """
         channel_array = np.array(channel_array, dtype='uint8')
-        product = np.ones_like(self)
+        product = np.copy(self)
         product[:, :, :3] = self[:, :, :3] * channel_array[:3]
         return ImageMatrix.format_image_array(product)
 
@@ -178,7 +183,7 @@ class ImageMatrix(np.ndarray):
         copy[:, :, 0] += operand
         return ImageMatrix.format_image_array_yiq(copy)
 
-    def mult_shine(self, operand):
+    def multiply_shine(self, operand):
         """
         Iterates through ImageMatrix self multiplying each pixel's colors by an float operand.\n
         :param operand: float value
@@ -188,7 +193,7 @@ class ImageMatrix(np.ndarray):
         copy[:, :, :3] *= operand
         return ImageMatrix.format_image_array(copy)
 
-    def mult_shine_y(self, operand):
+    def multiply_shine_y(self, operand):
         """
         Iterates through ImageMatrix self multiplying each pixel's Y component (luma) by an float operand.\n
         :param operand: float value
@@ -198,7 +203,7 @@ class ImageMatrix(np.ndarray):
         copy[:, :, 0] *= operand
         return ImageMatrix.format_image_array_yiq(copy)
 
-    def negative(self):
+    def get_negative(self):
         """
         Creates a ImageMatrix with complementary RGB components of self ImageMatrix.\n
         :return: Formatted uint8 ImageMatrix
@@ -208,7 +213,7 @@ class ImageMatrix(np.ndarray):
         copy[:, :, :3] = 255 - self[:, :, :3]
         return ImageMatrix.format_image_array(copy)
 
-    def negative_y(self):
+    def get_negative_y(self):
         """
         Creates a ImageMatrix with complementary Y component of self ImageMatrix.\n
         :return: Formatted float64 ImageMatrix
@@ -257,6 +262,10 @@ class ImageMatrix(np.ndarray):
         Routine for convolution with int kernels: flips the kernel, pads (extension) self ImageMatrix, applies kernel's
         convolution and formats the output.
         :param kernel: int np.ndarray kernel
+        :param offU: int number of pixels to upside to be ignored.
+        :param offD: int number of pixels to downside to be ignored.
+        :param offL: int number of pixels to left to be ignored.
+        :param offR: int number of pixels to right to be ignored.
         :return: uint8 ImageMatrix
         """
         copy = np.copy(self).view(ImageMatrix)
@@ -275,6 +284,10 @@ class ImageMatrix(np.ndarray):
         Routine for convolution with float kernels: flips the kernel, pads (extension) self ImageMatrix, applies
         kernel's convolution and formats the output.\n
         :param kernel: float np.ndarray kernel
+        :param offU: int number of pixels to upside to be ignored.
+        :param offD: int number of pixels to downside to be ignored.
+        :param offL: int number of pixels to left to be ignored.
+        :param offR: int number of pixels to right to be ignored.
         :return: float64 ImageMatrix
         """
         copy = np.copy(self).view(ImageMatrix)
@@ -288,7 +301,7 @@ class ImageMatrix(np.ndarray):
         copy[offU:self.shape[0] - offD, offL:self.shape[1] - offR] = output
         return copy
 
-    def median(self, kernel):
+    def apply_median_filter(self, kernel):
         """
         Apply median filter (kernel's content does not matter, only its contents).\n
         :param kernel: np.ndarray kernel
@@ -329,7 +342,7 @@ class ImageMatrix(np.ndarray):
         result = fl_copy.dot(t.T) * 255.0
         return ImageMatrix.format_image_array(result)
 
-    def gx_component(self):
+    def get_gx_component(self):
         """
         Returns self's Gx component (Sobel filter).\n
         :return: uint32 ImageMatrix
@@ -340,7 +353,7 @@ class ImageMatrix(np.ndarray):
         image_padded = np.int32(self.extension_padded(kernel))
         return gx.run_kernel_loop(image_padded, kernel)
 
-    def gy_component(self):
+    def get_gy_component(self):
         """
         Returns self's Gy component (Sobel filter).\n
         :return: uint32 ImageMatrix
@@ -351,7 +364,7 @@ class ImageMatrix(np.ndarray):
         image_padded = np.int32(self.extension_padded(kernel))
         return gy.run_kernel_loop(image_padded, kernel)
 
-    def sobel(self, gx_gy_component=None):
+    def apply_sobel_filter(self, gx_gy_component=None):
         """
         Apply Sobel filter.\n
         :param gx_gy_component: ImageMatrix 2-tuple containing Gx and Gy components.
@@ -359,8 +372,8 @@ class ImageMatrix(np.ndarray):
         :return: uint8 ImageMatrix
         """
         if gx_gy_component is None:
-            gx = self.gx_component()
-            gy = self.gx_component()
+            gx = self.get_gx_component()
+            gy = self.get_gx_component()
         else:
             gx = gx_gy_component[0]
             gy = gx_gy_component[1]
@@ -369,9 +382,9 @@ class ImageMatrix(np.ndarray):
         g = np.sqrt(np.power(gx, 2) + np.power(gy, 2))
         return ImageMatrix.format_image_array(g)
 
-    def grey(self):
+    def to_grey(self):
         """
-        Returns a ImageMatrix monocromatic channel of self.\n
+        Returns a ImageMatrix monochromatic channel of self.\n
         :return: uint8 ImageMatrix
         """
         factor = np.ones(self.shape[2], dtype='float64') * 255
@@ -379,7 +392,7 @@ class ImageMatrix(np.ndarray):
 
         fl_copy = np.float64(self)
 
-        y = fl_copy[:,:,:3].dot(factor[:3].T)
+        y = fl_copy[:, :, :3].dot(factor[:3].T)
         # Allows broadcasting
         y = y.reshape((*y.shape, 1)) * 255
         fl_copy[:, :, :3] = y
@@ -387,24 +400,21 @@ class ImageMatrix(np.ndarray):
         return ImageMatrix.format_image_array(fl_copy)
         
     @staticmethod
-    def is_float(data):
+    def is_float(np_arr):
         """
         Auxiliary method for checking numpy.dtype is any kind of float.\n
-        :param data: np.dtype value
+        :param np_arr: np.dtype value
         :return: Boolean True if data is any kind of numpy float.
         """
-        if isinstance(data, np.float16):
-            return True
-        elif isinstance(data, np.float32):
-            return True
-        elif isinstance(data, np.float64):
+        if isinstance(np_arr, np.float16) or isinstance(np_arr, np.float32) or isinstance(np_arr, np.float64):
             return True
         return False
 
-    def threshold_y(self, minimum=0.2, maximum=0.7):
+    def apply_threshold_y(self, minimum=0.2, maximum=0.7):
         """
         Applies threshold values over Y (luma) component's values.\n
-        :param m: float value for Y component threshold.
+        :param minimum: float maximum value for Y component threshold.
+        :param maximum: float minimum value for Y component threshold.
         :return: float YIQ ImageMatrix
         """
         copy = np.copy(self).view(self.__class__)
@@ -418,7 +428,7 @@ class ImageMatrix(np.ndarray):
 
         return copy
 
-    def threshold_mean_y(self):
+    def apply_threshold_mean_y(self):
         """
         Places a threshold over Y (luma) component values equal to its mean.\n
         :return: float YIQ ImageMatrix
@@ -435,7 +445,7 @@ class ImageMatrix(np.ndarray):
 
         return copy
 
-    def histogram_expansion(self):
+    def get_histogram_expansion(self):
         """
         Performs histogram expansion.\n
         :return: Formatted uint8 ImageMatrix
@@ -454,7 +464,7 @@ class ImageMatrix(np.ndarray):
         return ImageMatrix.format_image_array(copy)
 
     @staticmethod
-    def cdf(histogram):
+    def get_cdf_list(histogram):
         """
         Returns sum of cumulative histogram distribution up to pixel intensity level i.\n
         CDF stands for Cumulative Distribution Function
@@ -468,7 +478,7 @@ class ImageMatrix(np.ndarray):
 
         return cdf_list
 
-    def histogram(self, color_channel=0):
+    def get_histogram(self, color_channel=0):
         """
         Returns histogram for a single color channel.
         :return: Integer array
@@ -482,12 +492,12 @@ class ImageMatrix(np.ndarray):
 
         return histogram
 
-    def histogram_equalization(self, channel=0):
+    def apply_histogram_equalization_to_channel(self, channel=0):
         """
         Performs histogram equalization.\n
         :return: Formatted uint8 ImageMatrix
         """
-        histogram = self.histogram(channel)
+        histogram = self.get_histogram(channel)
 
         # Make array sequential
         pixels_num = self.shape[0] * self.shape[1]
@@ -497,7 +507,7 @@ class ImageMatrix(np.ndarray):
         min_cdf_key = np.amin(copy[:, channel])
 
         # Then, find cumulative distribution for that value
-        cdf_list = copy.cdf(histogram)
+        cdf_list = copy.get_cdf_list(histogram)
         min_cdf_value = cdf_list[min_cdf_key]
 
         # Create lookup table with new gray values
@@ -505,7 +515,7 @@ class ImageMatrix(np.ndarray):
         # https://en.wikipedia.org/wiki/Histogram_equalization
         LUT = np.zeros(256, dtype='uint64')
         # for i in range (0, 256):
-        LUT = ((cdf_list - min_cdf_value) / ((pixels_num) - min_cdf_value)) * 255
+        LUT = ((cdf_list - min_cdf_value) / (pixels_num - min_cdf_value)) * 255
 
         # Use LUT to apply the new gray values to each pixel
         copy[:] = LUT[copy[:]]
@@ -514,15 +524,24 @@ class ImageMatrix(np.ndarray):
         copy = copy.reshape(self.shape)
         return ImageMatrix.format_image_array(copy)
 
-    def histogram_equalization_rgb(self):
+    def apply_histogram_equalization_rgb(self):
+        """
+        Applies histogram equalization to the 3 first color channels (usually rgb channels).
+        :return: ImageMatrix with histogram equalized.
+        """
         copy = np.copy(self).view(self.__class__)
 
         for c in range(0, 3):
-            copy = copy.histogram_equalization(c)
+            copy = copy.apply_histogram_equalization_to_channel(c)
 
         return ImageMatrix.format_image_array(copy)
 
-    def get_mode_value(self):
+    def get_mode_rgb_value(self):
+        """
+        Get mode value for each of the 3 first color channels and create a vector with them.
+        :return: numpy.array with shape(3) or (4) containing the mode value for each of the color channels\n
+         (excluding alpha channel).
+        """
         mode_rgb = np.ones(self.shape[2]) * 255
 
         for channel in range(3):
@@ -540,7 +559,12 @@ class ImageMatrix(np.ndarray):
 
         return mode_rgb.astype(int)
 
-    def get_median_value(self):
+    def get_median_rgb_value(self):
+        """
+        Get median value for each of the 3 first color channels and create a vector with them.
+        :return: numpy.array with shape(3) or (4) containing the median value for each of the color channels\n
+         (excluding alpha channel).
+        """
         median_rgb = np.ones(self.shape[2]) * 255
 
         for channel in range(3):
@@ -548,7 +572,12 @@ class ImageMatrix(np.ndarray):
 
         return median_rgb.astype(int)
 
-    def get_mean_value(self):
+    def get_mean_rgb_value(self):
+        """
+        Get mean value for each of the 3 first color channels and create a vector with them.
+        :return: numpy.array with shape(3) or (4) containing the mean value for each of the color channels\n
+         (excluding alpha channel).
+        """
         mean_rgb = np.ones(self.shape[2]) * 255
 
         for channel in range(3):
@@ -557,6 +586,12 @@ class ImageMatrix(np.ndarray):
         return mean_rgb.astype(int)
 
     def replace_color(self, old_color, new_color):
+        """
+        Replaces every occurrence of old_color vector by new_color.
+        :param old_color: numpy.array shape(:, :, 3 or 4) color vector to be replaced.
+        :param new_color: numpy.array shape(:, :, 3 or 4) replacing color vector.
+        :return:ImageMatrix with old_color occurrences replaced by new_color.
+        """
         copy = np.copy(self)
         r, g, b = copy[:, :, 0], copy[:, :, 1], copy[:, :, 2]
         mask = (r == old_color[0]) & (g == old_color[1]) & (b == old_color[2])
@@ -564,14 +599,21 @@ class ImageMatrix(np.ndarray):
         return copy.view(ImageMatrix)
 
     def rotation_filling(self, angle, filling_mode='median'):
+        """
+        Rotates image without cropping and replaces black spaces by its median color vector\n
+        (See: get_median_rgb_value(), get_mode_rgb_value() and get_mean_rgb_value()).
+        :param angle: int angle of rotation.
+        :param filling_mode: function used to estimate color used to fill black spaces due to rotation.
+        :return: ImageMatrix rotated image without black spaces.
+        """
         PIL_img = Image.fromarray(self)
 
         if filling_mode == 'mode':
-            fill_color = self.get_mode_value()
+            fill_color = self.get_mode_rgb_value()
         elif filling_mode == 'mean':
-            fill_color = self.get_mean_value()
+            fill_color = self.get_mean_rgb_value()
         else:
-            fill_color = self.get_median_value()
+            fill_color = self.get_median_rgb_value()
 
         rotated = np.array(PIL_img.rotate(angle, resample=Image.BILINEAR, expand=True)).view(ImageMatrix)
         # replaces remaining black spaces
@@ -580,16 +622,25 @@ class ImageMatrix(np.ndarray):
         return rotated
 
     def get_contour_list(self):
+        """
+        (wrapper of opencv function) Get contour list of an image.
+        :return: list List of numpy.array contours
+        """
         gray = cv2.cvtColor(self, cv2.COLOR_BGR2GRAY)
         gray = cv2.GaussianBlur(gray, (3, 3), 0)
         edged = cv2.Canny(gray, 20, 100)
 
-        cnts = cv2.findContours(edged.copy(), cv2.RETR_EXTERNAL,
-                                cv2.CHAIN_APPROX_SIMPLE)
+        contour_list = cv2.findContours(edged.copy(), cv2.RETR_EXTERNAL,
+                                        cv2.CHAIN_APPROX_SIMPLE)
 
-        return cnts[0] if imutils.is_cv2() else cnts[1]
+        return contour_list[0] if imutils.is_cv2() else contour_list[1]
 
     def get_max_contour(self, contour_list=None):
+        """
+        (wrapper opencv function) Get the contour with maximum area.
+        :param contour_list: list of numpy arrays of contours.
+        :return: numpy.array of contour with maximum area.
+        """
         if contour_list is None:
             contour_list = self.get_contour_list()
         
@@ -599,6 +650,11 @@ class ImageMatrix(np.ndarray):
         return max_contour
         
     def get_contour_mask(self, contour=None):
+        """
+        Creates a mask for a numpy.array contour of image.
+        :param contour: numpy array describing a contour of image.
+        :return: numpy.array mask for the specified contour.
+        """
         if contour is None:
             contour = self.get_max_contour()
         
@@ -608,6 +664,11 @@ class ImageMatrix(np.ndarray):
         return mask
 
     def get_bounding_rect(self, contour=None):
+        """
+        Get coordinates (top left corner) and measures of a bounding box for the contour specified.
+        :param contour: numpy.array describing the contour.
+        :return:4-tuple containing the x and y coordinates of top left corner and width and height of the bounding box.
+        """
         if contour is None:
             contour = self.get_max_contour()
         # compute bounding box of image
@@ -615,38 +676,53 @@ class ImageMatrix(np.ndarray):
         return x, y, w, h
 
     def crop_max_contour(self):
+        """
+        Turns to black every pixel outside the maximum area contour and crops the image to its bounding box.
+        :return: ImageMatrix image cropped with only maximum contour pixels (other pixels are turned onto black).
+        """
         contour_list = self.get_contour_list()
 
         # Failed to detect contours
         if len(contour_list) == 0:
             fail = (np.ones_like(self) * 255)
-            fail[:,:,:3] = 0
+            fail[:, :, :3] = 0
             
             return fail.view(ImageMatrix)
         
         max_contour = self.get_max_contour(contour_list)
-        mask  = self.get_contour_mask(max_contour)
+        mask = self.get_contour_mask(max_contour)
         x, y, w, h = self.get_bounding_rect(max_contour)
         
         # extract the ROI and apply the mask
         imageROI = np.array(self)[y:y + h, x:x + w]
         maskROI = mask[y:y + h, x:x + w]
-        imageROI = cv2.bitwise_and(imageROI, imageROI,
-                                   mask=maskROI)
-        return imageROI
+        imageROI = cv2.bitwise_and(imageROI, imageROI, mask=maskROI)
+        return imageROI.view(ImageMatrix)
     
-    def rotation_crop(self, angle):
+    def rotate_cropping(self, angle):
+        """
+        Rotates and crops (See: crop_max_contour()) the maximum contour.
+        :param angle: int angle of rotation.
+        :return: ImageMatrix image rotated and cropped.
+        """
         imageROI = self.crop_max_contour()
         return np.array(imutils.rotate_bound(imageROI, angle)).view(ImageMatrix)
 
     def resize(self, height=-1, width=-1, ratio=1.0):
+        """
+        Resizes the image by new height * ratio and new width * ratio.
+        :param height: int new height (before multiplying by ratio).
+        :param width: int new width (before multiplying by ratio).
+        :param ratio: float ratio to multiply new height and new width of the image.
+        :return: ImageMatrix resized image
+        """
         height = self.shape[0] if height < 0 else height
         width = self.shape[1] if width < 0 else width
 
         # PIL expects (width, height)!
         new_dim = np.array([width * ratio, height * ratio], dtype='uint64') 
 
-        # recomendation:
+        # Recommended:
         #   PIL_Image.thumbnail() -> for reduced dimensions
         #   PIL_Image.resize() -> for augmented dimensions
         if height > self.shape[0] or width > self.shape[1] or ratio >= 1.0:
@@ -659,9 +735,16 @@ class ImageMatrix(np.ndarray):
             PIL_img.thumbnail(new_dim, Image.ANTIALIAS)
         elif pil_func == 'resize':
             PIL_img = PIL_img.resize(new_dim)
+
         return np.array(PIL_img).view(ImageMatrix)
         
     def show(self, title='Image', wait=True):
+        """
+        Utility function, shows the image using opencv viewer and (optional) key delayed waiting function.
+        :param title: str Name of the window of image.
+        :param wait: bool If the process should, or not, be put on standby (any keyboard key to interrupt).
+        :return: None
+        """
         cv2.imshow(title, cv2.cvtColor(self, cv2.COLOR_BGR2RGB))
         if wait:
             cv2.waitKey()
@@ -692,8 +775,9 @@ class Routine(object):
         self.img_mtx = ImageMatrix.from_file(filename)
 
     def channel(self):
-        for key, val in Filter.channels.iteritems():
-            self.img_mtx.channel(val).get_image().save(self.name + 'Channel' + key.upper() + self.ext)
+        for key, val in six.iteritems(Filter.channels):
+            print(val)
+            self.img_mtx.apply_mask(val).get_image().save(self.name + 'Channel' + key.upper() + self.ext)
 
     def add_shine(self):
         for i in np.arange(40, 161, 40):
@@ -701,30 +785,34 @@ class Routine(object):
 
     def add_shine_y(self):
         for f in np.arange(0.2, 1., 0.3):
-            self.img_mtx.to_yiq().add_shine_y(f).to_rgb().get_image().save(self.name + 'AddShineY' + "{0:.1f}".format(f).replace('.', '-') + self.ext)
+            self.img_mtx.to_yiq().add_shine_y(f).to_rgb().get_image()\
+                .save(self.name + 'AddShineY' + "{0:.1f}".format(f).replace('.', '-') + self.ext)
 
     def mult_shine(self):
         for f in np.arange(1.2, 2.8, 0.5):
-            self.img_mtx.mult_shine(f).get_image().save(self.name + 'MultShine' + str(f).replace('.', '-') + self.ext)
+            self.img_mtx.multiply_shine(f).get_image()\
+                .save(self.name + 'MultShine' + str(f).replace('.', '-') + self.ext)
 
     def mult_shine_y(self):
         for f in np.arange(1.5, 3.2, 0.8):
-            self.img_mtx.to_yiq().mult_shine_y(f).to_rgb().get_image().save(self.name + 'MultShineY' + "{0:.1f}".format(f).replace('.', '-') + self.ext)
+            self.img_mtx.to_yiq().multiply_shine_y(f).to_rgb().get_image()\
+                .save(self.name + 'MultShineY' + "{0:.1f}".format(f).replace('.', '-') + self.ext)
 
     def negative(self):
-        self.img_mtx.negative().get_image().save(self.name + 'Negative' + self.ext)
+        self.img_mtx.get_negative().get_image().save(self.name + 'Negative' + self.ext)
 
     def negative_y(self):
-        self.img_mtx.negative_y().get_image().save(self.name + "Negative_y" + self.ext)
+        self.img_mtx.get_negative_y().get_image().save(self.name + "Negative_y" + self.ext)
 
     def sharpen(self):
         self.img_mtx.apply_kernel(Filter.kernels['sharpen']).get_image().save(self.name + 'Sharpen' + self.ext)
 
     def other_kernel(self):
-        self.img_mtx.apply_kernel(Filter.kernels['other_kernel']).get_image().save(self.name + 'OtherKernel' + self.ext)
+        self.img_mtx.apply_kernel(Filter.kernels['other_kernel']).get_image()\
+            .save(self.name + 'OtherKernel' + self.ext)
 
     def median(self):
-        self.img_mtx.median(Filter.kernels['blur']).get_image().save(self.name + 'Median' + self.ext)
+        self.img_mtx.apply_median_filter(Filter.kernels['blur']).get_image().save(self.name + 'Median' + self.ext)
 
     def sharpening_through_mean(self):
         mean = self.img_mtx.apply_kernel_float(Filter.kernels_float['mean'])
@@ -744,28 +832,33 @@ class Routine(object):
         self.img_mtx.apply_kernel(Filter.kernels['log8n'] * -1).get_image().save(self.name + 'LoG8P' + self.ext)
 
     def sobel(self):
-        gx = self.img_mtx.gx_component()
+        gx = self.img_mtx.get_gx_component()
         gx.get_image().save(self.name + 'SobelGx' + self.ext)
-        gy = self.img_mtx.gy_component()
+        gy = self.img_mtx.get_gy_component()
         gy.get_image().save(self.name + 'SobelGy' + self.ext)
-        self.img_mtx.sobel([gx, gy]).get_image().save(self.name + 'Sobel' + self.ext)
+        self.img_mtx.apply_sobel_filter([gx, gy]).get_image().save(self.name + 'Sobel' + self.ext)
 
     def threshold_y(self, minimum=0.2, maximum=0.7):
-        self.img_mtx.to_yiq().threshold_y(minimum, maximum).to_rgb().get_image().save(self.name + 'ThresholdY' + self.ext)
+        self.img_mtx.to_yiq().apply_threshold_y(minimum, maximum).to_rgb().get_image()\
+            .save(self.name + 'ThresholdY' + self.ext)
 
     def threshold_mean_y(self):
-        self.img_mtx.to_yiq().threshold_mean_y().to_rgb().get_image().save(self.name + 'ThresholdMeanY' + self.ext)
+        self.img_mtx.to_yiq().apply_threshold_mean_y().to_rgb().get_image()\
+            .save(self.name + 'ThresholdMeanY' + self.ext)
 
     def border(self):
         for kernel_type in range(1, 4):
-            self.img_mtx.apply_kernel(Filter.kernels['border{0}'.format(kernel_type)]).get_image().save(self.name + 'Border{0}'.format(kernel_type) + self.ext)
+            self.img_mtx.apply_kernel(Filter.kernels['border{0}'.format(kernel_type)]).get_image()\
+                .save(self.name + 'Border{0}'.format(kernel_type) + self.ext)
 
     def border_float(self):
-        self.img_mtx.apply_kernel_float(Filter.kernels_float['border']).get_image().save(self.name + 'Border_float' + self.ext)
+        self.img_mtx.apply_kernel_float(Filter.kernels_float['border']).get_image()\
+            .save(self.name + 'Border_float' + self.ext)
 
     def emboss(self):
         for kernel_type in range(1, 4):
-            self.img_mtx.apply_kernel(Filter.kernels['emboss{0}'.format(kernel_type)]).get_image().save(self.name + 'Emboss{0}'.format(kernel_type) + self.ext)
+            self.img_mtx.apply_kernel(Filter.kernels['emboss{0}'.format(kernel_type)]).get_image()\
+                .save(self.name + 'Emboss{0}'.format(kernel_type) + self.ext)
 
     def sharpness(self, c=0, d=1):
         for kernel_type in range(1, 3):
@@ -773,13 +866,15 @@ class Routine(object):
             kernel *= c
             central = kernel.shape[0] // 2
             kernel[central, central] += d
-            self.img_mtx.apply_kernel(kernel).get_image().save(self.name + 'Sharpen{0}c{1}d{2}'.format(kernel_type, c, d) + self.ext)
+            self.img_mtx.apply_kernel(kernel).get_image()\
+                .save(self.name + 'Sharpen{0}c{1}d{2}'.format(kernel_type, c, d) + self.ext)
 
     def expansion(self):
-        self.img_mtx.histogram_expansion().get_image().save(self.name+'Expanded'+self.ext)
+        self.img_mtx.get_histogram_expansion().get_image().save(self.name + 'Expanded' + self.ext)
 
     def equalization(self, channel=0):
-        self.img_mtx.histogram_equalization(channel).get_image().save(self.name+'Equalized'+self.ext)
+        self.img_mtx.apply_histogram_equalization_to_channel(channel).get_image()\
+            .save(self.name + 'Equalized' + self.ext)
 
     def equalization_rgb(self):
-        self.img_mtx.histogram_equalization_rgb().get_image().save(self.name+'EqualizedRGB'+self.ext)
+        self.img_mtx.apply_histogram_equalization_rgb().get_image().save(self.name + 'EqualizedRGB' + self.ext)
