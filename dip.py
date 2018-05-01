@@ -68,27 +68,29 @@ class ImageMatrix(np.ndarray):
 
     # INTERFACE METHODS
     @staticmethod
-    def from_file(filename):
+    def from_file(filename, fix_rotation=False):
         """
         Creates an ImageMatrix object corresponding to filename.\n
         :param filename: string name of the file (including its extension).
         :return: ImageMatrix (subclass of numpy.ndarray) object of the RGB or RGBA pixels.
         """
 
-        # Fixing rotation
         image = Image.open(filename)
-        if hasattr(image, '_getexif'):
-            orientation = 0x0112
-            exif = image._getexif()
-            if exif is not None:
-                orientation = exif[orientation]
-                rotations = {
-                    3: Image.ROTATE_180,
-                    6: Image.ROTATE_270,
-                    8: Image.ROTATE_90
-                }
-                if orientation in rotations:
-                    image = image.transpose(rotations[orientation])
+        
+        # Fixing rotation
+        if fix_rotation:
+            if hasattr(image, '_getexif'):
+                orientation = 0x0112
+                exif = image._getexif()
+                if exif is not None:
+                    orientation = exif[orientation]
+                    rotations = {
+                        3: Image.ROTATE_180,
+                        6: Image.ROTATE_270,
+                        8: Image.ROTATE_90
+                    }
+                    if orientation in rotations:
+                        image = image.transpose(rotations[orientation])
 
         # Handling with file formats
         if image.format in ['JPEG', 'BMP', 'PCX', 'PPM']:
