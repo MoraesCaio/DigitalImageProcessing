@@ -204,7 +204,7 @@ class ImageMatrix(np.ndarray):
         :return: Formatted uint8 ImageMatrix
         """
         # keeps alpha channel's values
-        copy = np.ones_like(self)
+        copy = np.copy(self)
         copy[:, :, :3] = 255 - self[:, :, :3]
         return ImageMatrix.format_image_array(copy)
 
@@ -243,12 +243,12 @@ class ImageMatrix(np.ndarray):
         :param kernel: np.ndarray kernel
         :return: uint8/float64 ImageMatrix
         """
-        copy = np.ones_like(self) * 255
+        copy = np.copy(self)
+        dim = kernel.shape[0]
         # kernel application
-        for x in range(copy.shape[1]):
-            for y in range(copy.shape[0]):
-                for c in range(3):
-                    copy[y, x, c] = (image_padded[y:y + kernel.shape[0], x:x + kernel.shape[0], c] * kernel).sum()
+        for y in range(copy.shape[0]):
+            for x in range(copy.shape[1]):
+                copy[y, x, :3] = np.einsum('yxc,yx->c', image_padded[y:y + dim, x:x + dim, :3], kernel)
 
         return copy.view(self.__class__)
 
@@ -306,8 +306,6 @@ class ImageMatrix(np.ndarray):
                     copy1d = image_padded[y:y + kernel.shape[0], x:x + kernel.shape[0], c].flatten()
                     copy1d.sort()
                     output[y, x, c] = copy1d[hks + 1]
-                    # does not work! kernel must not be applied over a backup array
-                    # image_padded[y+hks, x+hks, c] = copy1d[hks+1]
 
         return ImageMatrix.format_image_array(output)
 
