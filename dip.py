@@ -573,12 +573,11 @@ class ImageMatrix(np.ndarray):
         else:
             fill_color = self.get_median_value()
 
-        rotated = np.array(PIL_img.rotate(angle, resample=Image.BILINEAR, expand=True))
-        r, g, b = rotated[:, :, 0], rotated[:, :, 1], rotated[:, :, 2]
-        mask = (r == 0) & (g == 0) & (b == 0)
-        rotated[:, :, :][mask] = fill_color
+        rotated = np.array(PIL_img.rotate(angle, resample=Image.BILINEAR, expand=True)).view(ImageMatrix)
+        # replaces remaining black spaces
+        rotated = rotated.replace_color(np.array([0, 0, 0]), fill_color)
 
-        return rotated.view(ImageMatrix)
+        return rotated
 
     def rotation_crop(self, angle):
         gray = cv2.cvtColor(self, cv2.COLOR_BGR2GRAY)
