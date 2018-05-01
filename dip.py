@@ -556,6 +556,13 @@ class ImageMatrix(np.ndarray):
 
         return mean_rgb.astype(int)
 
+    def replace_color(self, old_color, new_color):
+        copy = np.copy(self)
+        r, g, b = copy[:, :, 0], copy[:, :, 1], copy[:, :, 2]
+        mask = (r == old_color[0]) & (g == old_color[1]) & (b == old_color[2])
+        copy[:, :, :][mask] = new_color
+        return copy.view(ImageMatrix)
+
     def rotation_filling(self, angle, filling_mode='median'):
         PIL_img = Image.fromarray(self)
 
