@@ -449,11 +449,12 @@ class ImageMatrix(np.ndarray):
             n_max[i] = np.amax(copy[:, :, i])
             n_min[i] = np.amin(copy[:, :, i])
 
-        copy[:, :, :3] = ((copy[:, :, :3] - n_min[:3]) / (n_max[:3] - n_min[:3])) * (255)
+        copy[:, :, :3] = ((copy[:, :, :3] - n_min[:3]) / (n_max[:3] - n_min[:3])) * 255
 
         return ImageMatrix.format_image_array(copy)
 
-    def cdf(self, histogram):
+    @staticmethod
+    def cdf(histogram):
         """
         Returns sum of cumulative histogram distribution up to pixel intensity level i.\n
         CDF stands for Cumulative Distribution Function
@@ -474,7 +475,7 @@ class ImageMatrix(np.ndarray):
         """
 
         unique, counts = np.unique(self[:, :, color_channel], return_counts=True)
-        histogram = np.zeros((256), dtype='uint64')
+        histogram = np.zeros(256, dtype='uint64')
 
         for key, value in zip(unique, counts):
             histogram[key] = value
@@ -490,7 +491,7 @@ class ImageMatrix(np.ndarray):
 
         # Make array sequential
         pixels_num = self.shape[0] * self.shape[1]
-        copy = self.reshape((pixels_num), self.shape[2])
+        copy = self.reshape(pixels_num, self.shape[2])
 
         # First, find lowest intensity value in image
         min_cdf_key = np.amin(copy[:, channel])
@@ -502,7 +503,7 @@ class ImageMatrix(np.ndarray):
         # Create lookup table with new gray values
         # For equation explanation refer to:
         # https://en.wikipedia.org/wiki/Histogram_equalization
-        LUT = np.zeros((256), dtype='uint64')
+        LUT = np.zeros(256, dtype='uint64')
         # for i in range (0, 256):
         LUT = ((cdf_list - min_cdf_value) / ((pixels_num) - min_cdf_value)) * 255
 
@@ -539,7 +540,6 @@ class ImageMatrix(np.ndarray):
 
         return mode_rgb.astype(int)
 
-
     def get_median_value(self):
         median_rgb = np.ones(self.shape[2]) * 255
 
@@ -547,7 +547,6 @@ class ImageMatrix(np.ndarray):
             median_rgb[channel] = np.median(self[:, :, channel])
 
         return median_rgb.astype(int)
-
 
     def get_mean_value(self):
         mean_rgb = np.ones(self.shape[2]) * 255
