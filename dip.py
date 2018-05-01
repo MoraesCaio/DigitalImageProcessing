@@ -374,14 +374,18 @@ class ImageMatrix(np.ndarray):
         Returns a ImageMatrix monocromatic channel of self.\n
         :return: uint8 ImageMatrix
         """
-        copy = np.ones_like(self)
-        factor = np.array([299.0 / 1000, 587.0 / 1000, 114.0 / 1000])
-        for x in range(self.shape[1]):
-            for y in range(self.shape[0]):
-                l = (self[y, x] * factor).sum()
-                copy[y, x, :3] = np.array([l, l, l])
-        return ImageMatrix.format_image_array(copy)
+        factor = np.ones(self.shape[2], dtype='float64') * 255
+        factor[:3] = np.array([0.299, 0.587, 0.114]) / 255
 
+        fl_copy = np.float64(self)
+
+        y = fl_copy[:,:,:3].dot(factor[:3].T)
+        # Allows broadcasting
+        y = y.reshape((*y.shape, 1)) * 255
+        fl_copy[:, :, :3] = y
+
+        return ImageMatrix.format_image_array(fl_copy)
+        
     @staticmethod
     def is_float(data):
         """
