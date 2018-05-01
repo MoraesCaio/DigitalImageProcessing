@@ -579,40 +579,88 @@ class ImageMatrix(np.ndarray):
 
         return rotated
 
-    def rotation_crop(self, angle):
+    def get_contour_list(self):
         gray = cv2.cvtColor(self, cv2.COLOR_BGR2GRAY)
         gray = cv2.GaussianBlur(gray, (3, 3), 0)
         edged = cv2.Canny(gray, 20, 100)
 
-        # find contours in the edge map
         cnts = cv2.findContours(edged.copy(), cv2.RETR_EXTERNAL,
                                 cv2.CHAIN_APPROX_SIMPLE)
-        cnts = cnts[0] if imutils.is_cv2() else cnts[1]
 
-        # ensure at least one contour was found
-        if len(cnts) > 0:
-            # grab the largest contour, then draw a mask for the image
-            c = max(cnts, key=cv2.contourArea)
-            mask = np.zeros(gray.shape, dtype="uint8")
-            cv2.drawContours(mask, [c], -1, 255, -1)
+        return cnts[0] if imutils.is_cv2() else cnts[1]
 
-            # compute its bounding box of image, then extract the ROI,
-            # and apply the mask
-            (x, y, w, h) = cv2.boundingRect(c)
-            imageROI = np.array(self)[y:y + h, x:x + w]
-            maskROI = mask[y:y + h, x:x + w]
-            imageROI = cv2.bitwise_and(imageROI, imageROI,
-                                       mask=maskROI)
+    def get_max_contour(self, contour_list=None):
+        if contour_list is None:
+            contour_list = self.get_contour_list()
+        
+        # grab the largest contour
+        max_contour = max(contour_list, key=cv2.contourArea)
+        
+        return max_contour
+        
+    def get_contour_mask(self, contour=None):
+        if contour is None:
+            contour = self.get_max_contour()
+        
+        mask = np.zeros((self.shape[0], self.shape[1]), dtype="uint8")
+        cv2.drawContours(mask, [contour], -1, 255, -1)
 
+        return mask
+
+    def get_bounding_rect(self, contour=None):
+        if contour is None:
+            contour = self.get_max_contour()
+        # compute bounding box of image
+        (x, y, w, h) = cv2.boundingRect(contour)
+        return x, y, w, h
+
+    def crop_max_contour(self):
+        contour_list = self.get_contour_list()
+
+        # Failed to detect contours
+        if len(contour_list) == 0:
+            fail = (np.ones_like(self) * 255)
+            fail[:,:,:3] = 0
+            
+            return fail.view(ImageMatrix)
+        
+        max_contour = self.get_max_contour(contour_list)
+        mask  = self.get_contour_mask(max_contour)
+        x, y, w, h = self.get_bounding_rect(max_contour)
+        
+        # extract the ROI and apply the mask
+        imageROI = np.array(self)[y:y + h, x:x + w]
+        maskROI = mask[y:y + h, x:x + w]
+        imageROI = cv2.bitwise_and(imageROI, imageROI,
+                                   mask=maskROI)
+        return imageROI
+    
+    def rotation_crop(self, angle):
+        imageROI = self.crop_max_contour()
         return np.array(imutils.rotate_bound(imageROI, angle)).view(ImageMatrix)
 
     def resize(self, height=-1, width=-1, ratio=1.0):
-        resized = Image.fromarray(self)
         height = self.shape[0] if height < 0 else height
         width = self.shape[1] if width < 0 else width
-        resized.thumbnail(np.array([height, width]) * ratio, Image.ANTIALIAS)
-        return np.array(resized).view(ImageMatrix)
 
+        # PIL expects (width, height)!
+        new_dim = np.array([width * ratio, height * ratio], dtype='uint64') 
+
+        # recomendation:
+        #   PIL_Image.thumbnail() -> for reduced dimensions
+        #   PIL_Image.resize() -> for augmented dimensions
+        if height > self.shape[0] or width > self.shape[1] or ratio >= 1.0:
+            pil_func = 'resize'
+        else:
+            pil_func = 'thumbnail'
+
+        PIL_img = Image.fromarray(self)
+        if pil_func == 'thumbnail':
+            PIL_img.thumbnail(new_dim, Image.ANTIALIAS)
+        elif pil_func == 'resize':
+            PIL_img = PIL_img.resize(new_dim)
+        return np.array(PIL_img).view(ImageMatrix)
+        
     def show(self, title='Image', wait=True):
         cv2.imshow(title, cv2.cvtColor(self, cv2.COLOR_BGR2RGB))
         if wait:
