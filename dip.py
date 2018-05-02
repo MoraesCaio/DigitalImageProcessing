@@ -241,11 +241,12 @@ class ImageMatrix(np.ndarray):
 
         return image_padded.view(self.__class__)
 
-    def run_kernel_loop(self, image_padded, kernel):
+    def run_kernel_loop(self, image_padded, kernel, bias=0):
         """
         Iterates through self ImageMatrix applying convolutional kernel.\n
         :param image_padded: ImageMatrix with adequate shape and content (see extension_padded()).
         :param kernel: np.ndarray kernel
+        :param bias: int value added to each convolution operation.
         :return: uint8/float64 ImageMatrix
         """
         copy = np.copy(self)
@@ -253,11 +254,11 @@ class ImageMatrix(np.ndarray):
         # kernel application
         for y in range(copy.shape[0]):
             for x in range(copy.shape[1]):
-                copy[y, x, :3] = np.einsum('yxc,yx->c', image_padded[y:y + dim, x:x + dim, :3], kernel)
+                copy[y, x, :3] = np.einsum('yxc,yx->c', image_padded[y:y + dim, x:x + dim, :3], kernel) + bias
 
         return copy.view(self.__class__)
 
-    def apply_kernel(self, kernel, offU=0, offD=0, offL=0, offR=0):
+    def apply_kernel(self, kernel, offU=0, offD=0, offL=0, offR=0, bias=0):
         """
         Routine for convolution with int kernels: flips the kernel, pads (extension) self ImageMatrix, applies kernel's
         convolution and formats the output.
@@ -266,6 +267,7 @@ class ImageMatrix(np.ndarray):
         :param offD: int number of pixels to downside to be ignored.
         :param offL: int number of pixels to left to be ignored.
         :param offR: int number of pixels to right to be ignored.
+        :param bias: int value added to each convolution operation.
         :return: uint8 ImageMatrix
         """
         copy = np.copy(self).view(ImageMatrix)
@@ -275,11 +277,11 @@ class ImageMatrix(np.ndarray):
         output = np.int16(offset).view(self.__class__)
         image_padded = np.int16(offset.extension_padded(kernel))
 
-        output = ImageMatrix.format_image_array(output.run_kernel_loop(image_padded, kernel))
+        output = ImageMatrix.format_image_array(output.run_kernel_loop(image_padded, kernel, bias))
         copy[offU:self.shape[0] - offD, offL:self.shape[1] - offR] = output
         return copy
 
-    def apply_kernel_float(self, kernel, offU=0, offD=0, offL=0, offR=0):
+    def apply_kernel_float(self, kernel, offU=0, offD=0, offL=0, offR=0, bias=0):
         """
         Routine for convolution with float kernels: flips the kernel, pads (extension) self ImageMatrix, applies
         kernel's convolution and formats the output.\n
@@ -288,6 +290,7 @@ class ImageMatrix(np.ndarray):
         :param offD: int number of pixels to downside to be ignored.
         :param offL: int number of pixels to left to be ignored.
         :param offR: int number of pixels to right to be ignored.
+        :param bias: int value added to each convolution operation.
         :return: float64 ImageMatrix
         """
         copy = np.copy(self).view(ImageMatrix)
@@ -297,7 +300,7 @@ class ImageMatrix(np.ndarray):
         output = np.float64(offset).view(self.__class__)
         image_padded = np.float64(offset.extension_padded(kernel))
 
-        output = ImageMatrix.format_image_array(output.run_kernel_loop(image_padded, kernel))
+        output = ImageMatrix.format_image_array(output.run_kernel_loop(image_padded, kernel, bias))
         copy[offU:self.shape[0] - offD, offL:self.shape[1] - offR] = output
         return copy
 
