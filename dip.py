@@ -762,6 +762,17 @@ class ImageMatrix(np.ndarray):
         self.get_image().save(filename, format, **params)
         return self
 
+    def is_saturation_greater_than(self, saturation_tolerance):
+        """
+        Tests if any channel is greater the int saturation_tolerance(i.e. if\n
+        the resulting color saturation is beyond the threshold).
+        """
+        median = self.get_median_rgb_value()[:3]
+        return np.absolute(median[0]-median[1]) >= saturation_tolerance or \
+               np.absolute(median[1]-median[2]) >= saturation_tolerance or \
+               np.absolute(median[2]-median[0]) >= saturation_tolerance
+
+
 class Routine(object):
     """Facade for common processes with creation of files.
 
