@@ -630,10 +630,13 @@ class ImageMatrix(np.ndarray):
         :return: list List of numpy.array contours
         """
         gray = cv2.cvtColor(self, cv2.COLOR_BGR2GRAY)
-        gray = cv2.GaussianBlur(gray, (3, 3), 0)
-        edged = cv2.Canny(gray, 20, 100)
-
-        contour_list = cv2.findContours(edged.copy(), cv2.RETR_EXTERNAL,
+        blurred = cv2.GaussianBlur(gray, (3, 3), 0)
+        edged = cv2.Canny(blurred, 70, 200)
+        
+        kernel = np.ones((3, 3), np.uint8)
+        closing = cv2.morphologyEx(edged, cv2.MORPH_CLOSE, kernel)
+        
+        contour_list = cv2.findContours(closing.copy(), cv2.RETR_EXTERNAL,
                                         cv2.CHAIN_APPROX_SIMPLE)
 
         return contour_list[0] if imutils.is_cv2() else contour_list[1]
