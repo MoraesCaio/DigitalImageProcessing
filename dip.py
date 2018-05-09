@@ -746,15 +746,21 @@ class ImageMatrix(np.ndarray):
         
     def show(self, title='Image', wait=True):
         """
-        Utility function, shows the image using opencv viewer and (optional) key delayed waiting function.
+        Utility function, shows the image using opencv viewer and (optional)\n
+        key delayed waiting function.
         :param title: str Name of the window of image.
-        :param wait: bool If the process should, or not, be put on standby (any keyboard key to interrupt).
+        :param wait: bool If the process should, or not, be put on standby\n
+        (any keyboard key to interrupt).
         :return: None
         """
         cv2.imshow(title, cv2.cvtColor(self, cv2.COLOR_BGR2RGB))
         if wait:
             cv2.waitKey()
+        return self
 
+    def save(self, filename, format=None, **params):
+        self.get_image().save(filename, format, **params)
+        return self
 
 class Routine(object):
     """Facade for common processes with creation of files.
