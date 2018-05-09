@@ -385,7 +385,7 @@ class ImageMatrix(np.ndarray):
         g = np.sqrt(np.power(gx, 2) + np.power(gy, 2))
         return ImageMatrix.format_image_array(g)
 
-    def to_grey(self):
+    def to_gray(self):
         """
         Returns a ImageMatrix monochromatic channel of self.\n
         :return: uint8 ImageMatrix
@@ -448,9 +448,9 @@ class ImageMatrix(np.ndarray):
 
         return copy
 
-    def get_histogram_expansion(self):
+    def apply_histogram_stretching(self):
         """
-        Performs histogram expansion.\n
+        Performs histogram stretching.\n
         :return: Formatted uint8 ImageMatrix
         """
         n_max = np.zeros(3, dtype='uint8')
@@ -601,7 +601,7 @@ class ImageMatrix(np.ndarray):
         copy[:, :, :][mask] = new_color
         return copy.view(ImageMatrix)
 
-    def rotation_filling(self, angle, filling_mode='median'):
+    def rotate_filling(self, angle, filling_mode='median'):
         """
         Rotates image without cropping and replaces black spaces by its median color vector\n
         (See: get_median_rgb_value(), get_mode_rgb_value() and get_mean_rgb_value()).
@@ -873,7 +873,7 @@ class Routine(object):
                 .save(self.name + 'Sharpen{0}c{1}d{2}'.format(kernel_type, c, d) + self.ext)
 
     def expansion(self):
-        self.img_mtx.get_histogram_expansion().get_image().save(self.name + 'Expanded' + self.ext)
+        self.img_mtx.apply_histogram_stretching().get_image().save(self.name + 'Expanded' + self.ext)
 
     def equalization(self, channel=0):
         self.img_mtx.apply_histogram_equalization_to_channel(channel).get_image()\
